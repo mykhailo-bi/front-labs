@@ -13,6 +13,15 @@ class BaseRepository:
     def create(self, **kwargs):
         return self.model.objects.create(**kwargs)
 
+    def update(self, id, **kwargs):
+        # Update fields for the given id and return the updated instance
+        self.model.objects.filter(id=id).update(**kwargs)
+        return self.find(id)
+
+    def delete(self, id):
+        obj = self.find(id)
+        obj.delete()
+        return True
 
 class UserRepository(BaseRepository):
     def __init__(self):
