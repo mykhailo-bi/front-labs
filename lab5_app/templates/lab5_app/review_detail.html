@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Review #{{ review.id }} - details</title>
+</head>
+<body>
+    <h1>Review #{{ review.id }}</h1>
+
+    <p><strong>Product:</strong> {{ review.product.name }}</p>
+    <p><strong>User:</strong> {{ review.user.username }}</p>
+    <p><strong>Rating:</strong> {{ review.rating }}</p>
+    <p><strong>Text:</strong></p>
+    <div>{{ review.text|linebreaks }}</div>
+
+    <p>
+        <a href="{% url 'lab5_app:review_edit' id=review.id %}">Edit</a> |
+        <a href="{% url 'lab5_app:review_list' %}">Back to list</a>
+    </p>
+
+    <h2>Delete this review</h2>
+    <form method="post" action="{% url 'lab5_app:review_delete' id=review.id %}">
+        {% csrf_token %}
+        <button type="submit">Delete review</button>
+    </form>
+</body>
+</html>

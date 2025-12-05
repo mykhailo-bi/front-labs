@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Course #{{ course.course_id }} - details</title>
+</head>
+<body>
+    <h1>Course #{{ course.course_id }}</h1>
+    <p><strong>Name:</strong> {{ course.course_name }}</p>
+    <p><strong>Description:</strong> {{ course.description }}</p>
+    <p><strong>Duration (hours):</strong> {{ course.duration }}</p>
+    <p><strong>Price:</strong> {{ course.price }}</p>
+
+    <p>
+        <a href="{% url 'lab5_app2:course_list' %}">Back to courses</a> |
+        <a href="{% url 'lab5_app2:course_edit' id=course.course_id %}">Edit Course</a> |
+        <a href="{% url 'lab5_app2:course_detail' id=course.course_id %}">Refresh</a>
+    </p>
+
+    <h2>Delete course</h2>
+    <form method="post" action="{% url 'lab5_app2:course_delete' id=course.course_id %}">
+        {% csrf_token %}
+        <button type="submit">Delete course</button>
+    </form>
+</body>
+</html>

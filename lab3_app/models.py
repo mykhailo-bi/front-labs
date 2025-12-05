@@ -6,6 +6,7 @@
 #   * Remove `` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
+from django.forms import ValidationError
 
 
 class Cart(models.Model):
@@ -90,6 +91,13 @@ class Review(models.Model):
         
         db_table = 'review'
         unique_together = (('user', 'product'),)
+
+    def clean(self):
+        super().clean()
+        if self.rating < 1 or self.rating > 5:
+            raise ValidationError(
+                {'rating': 'Rating must be between 1 and 5.'}
+            )
 
 
 class ReviewImage(models.Model):

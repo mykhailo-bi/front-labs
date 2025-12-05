@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Carts - list</title>
+</head>
+<body>
+    <h1>Carts</h1>
+    <p><a href="{% url 'lab5_app:product_list' %}">Products</a> | <a href="{% url 'lab5_app:user_list' %}">Users</a></p>
+
+    <ul>
+    {% for cart in carts %}
+        <li>
+            <a href="{% url 'lab5_app:cart_detail' id=cart.id %}">Cart #{{ cart.id }} - User {{ cart.user_id }} ({{ cart.count }})</a>
+        </li>
+    {% empty %}
+        <li>No carts.</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>

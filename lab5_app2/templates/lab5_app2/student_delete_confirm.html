@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Delete Student #{{ student.student_id }}</title>
+</head>
+<body>
+    <h1>Delete Student</h1>
+    <p>Are you sure you want to delete student #{{ student.student_id }} - {{ student.first_name }} {{ student.last_name }}?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Confirm delete</button>
+        <a href="{% url 'lab5_app2:student_detail' id=student.student_id %}">Cancel</a>
+    </form>
+</body>
+</html>

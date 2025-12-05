@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Reviews - list</title>
+</head>
+<body>
+    <h1>Reviews</h1>
+    <p><a href="{% url 'lab5_app:review_create' %}">Add new review</a></p>
+
+    <ul>
+    {% for review in reviews %}
+        <li>
+            <a href="{% url 'lab5_app:review_detail' id=review.id %}">
+                Review #{{ review.id }} - {{ review.product.name }} by {{ review.user.username }}
+            </a>
+            (rating: {{ review.rating }})
+        </li>
+    {% empty %}
+        <li>No reviews yet.</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>

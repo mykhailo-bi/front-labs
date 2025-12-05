@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Bad Request</title>
+</head>
+<body>
+    <h1>Bad Request</h1>
+
+    <p>An error has occurred with your data! Please fix and resubmit</p>
+
+    <pre>
+        {{ error_message }}
+    </pre>
+
+    {% if params.id %}
+        <p>
+            <a href="{% url callback id=params.id %}">Back</a>
+        </p>
+    {% else %}
+        <p>
+            <a href="{% url callback %}">Back</a>
+        </p>
+    {% endif %}
+</body>
+</html>

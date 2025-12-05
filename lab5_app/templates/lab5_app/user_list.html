@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Users - list</title>
+</head>
+<body>
+    <h1>Users</h1>
+    <p><a href="{% url 'lab5_app:review_list' %}">Reviews</a> | <a href="{% url 'lab5_app:product_list' %}">Products</a></p>
+
+    <ul>
+    {% for user in users %}
+        <li>
+            <a href="{% url 'lab5_app:user_detail' id=user.id %}">User #{{ user.id }} - {{ user.username }}</a>
+        </li>
+    {% empty %}
+        <li>No users.</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>

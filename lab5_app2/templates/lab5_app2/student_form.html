@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>{% if editing %}Edit Student{% else %}Create Student{% endif %}</title>
+</head>
+<body>
+    <h1>{% if editing %}Edit Student{% else %}Create Student{% endif %}</h1>
+    {% if editing and data.student_id %}
+        <p><em>Editing student #{{ data.student_id }}</em></p>
+    {% endif %}
+
+    {% if errors %}
+        <div style="color:red">
+            <strong>Errors:</strong>
+            <pre>{{ errors }}</pre>
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <p>
+            <label>First name:<br>
+                <input type="text" name="first_name" value="{{ data.first_name|default:'' }}">
+            </label>
+        </p>
+        <p>
+            <label>Last name:<br>
+                <input type="text" name="last_name" value="{{ data.last_name|default:'' }}">
+            </label>
+        </p>
+        <p>
+            <label>Email:<br>
+                <input type="email" name="email" value="{{ data.email|default:'' }}">
+            </label>
+        </p>
+        <p>
+            <label>Phone:<br>
+                <input type="text" name="phone" value="{{ data.phone|default:'' }}">
+            </label>
+        </p>
+
+        <p>
+            <button type="submit">{% if editing %}Save changes{% else %}Create{% endif %}</button>
+            <a href="{% url 'lab5_app2:student_list' %}">Cancel</a>
+        </p>
+    </form>
+</body>
+</html>

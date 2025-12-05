@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Products - list</title>
+</head>
+<body>
+    <h1>Products</h1>
+    <p>
+        <a href="{% url 'lab5_app:review_list' %}">Reviews</a> |
+        <a href="{% url 'lab5_app:user_list' %}">Users</a>
+    </p>
+
+    <ul>
+    {% for product in products %}
+        <li>
+            <a href="{% url 'lab5_app:product_detail' id=product.id %}">
+                Product #{{ product.id }} - {{ product.name }} ({{ product.price }})
+            </a>
+        </li>
+    {% empty %}
+        <li>No products.</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>
