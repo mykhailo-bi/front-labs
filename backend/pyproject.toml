@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "front_labs_backend"
+version = "0.1.0"
+description = "Backend-only Django project (JSON API)."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "Django>=4.2,<5.0",
+  "djangorestframework>=3.15",
+  "djangorestframework-simplejwt>=5.3",
+  "drf-spectacular>=0.27",
+  "psycopg2-binary>=2.9",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.3",
+  "black>=24.0",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["backend_app*", "backend_project*"]
+
+[tool.ruff]
+line-length = 100
+
+target-version = "py310"
+
+[tool.black]
+line-length = 100

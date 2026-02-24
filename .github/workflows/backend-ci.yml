@@ -1,0 +1,58 @@
+name: backend-ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          # Keep minimum supported + track latest stable.
+          - "3.10"
+          - "3.x"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ matrix.python-version }}"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install backend
+        working-directory: backend
+        run: |
+          uv sync --extra dev --locked
+
+      - name: Lint (ruff)
+        working-directory: backend
+        run: |
+          uv run ruff check .
+
+      - name: Format check (black)
+        working-directory: backend
+        run: |
+          uv run black --check .
+
+      - name: Run migrations + tests (SQLite)
+        env:
+          DJANGO_SECRET_KEY: ci
+          DJANGO_DEBUG: "1"
+          DB_ENGINE: django.db.backends.sqlite3
+          DB_NAME: ":memory:"
+          DB_USER: x
+          DB_PASSWORD: x
+          DB_HOST: x
+          DB_PORT: "0"
+        working-directory: backend
+        run: |
+          uv run python manage.py migrate
+          uv run python manage.py test
