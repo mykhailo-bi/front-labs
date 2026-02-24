@@ -7,7 +7,7 @@ This repository contains a **backend-only** Django project exposing a small JSON
 Primary API prefix is `/api/v1/`.
 
 For backwards compatibility, the same routes are also available under `/` (temporary alias):
-[`backend/backend_project/urls.py`](backend/backend_project/urls.py:1)
+[`backend_project/urls.py`](backend_project/urls.py)
 
 ## Requirements
 
@@ -71,7 +71,7 @@ uv run python -m demo_scripts.seed_demo_data \
   --reset
 ```
 
-Source: [`backend/demo_scripts/seed_demo_data.py`](backend/demo_scripts/seed_demo_data.py:1)
+Source: [`demo_scripts/seed_demo_data.py`](demo_scripts/seed_demo_data.py)
 
 Optional dev tools:
 

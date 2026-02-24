@@ -37,7 +37,7 @@ class SimpleJWTAuthentication(authentication.BaseAuthentication):
 
     This project does NOT use Django's built-in auth user model. We still use
     SimpleJWT for token minting/verification, but look up users via
-    [`backend_app.models.User`](backend/backend_app/models.py:144).
+    [`backend_app.models.User`](backend/backend_app/models.py#L144).
     """
 
     def authenticate(self, request) -> Optional[Tuple[models.User, AccessToken]]:

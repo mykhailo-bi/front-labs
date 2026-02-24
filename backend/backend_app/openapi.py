@@ -7,7 +7,7 @@ from drf_spectacular.extensions import OpenApiAuthenticationExtension
 
 
 class SimpleJWTAuthenticationScheme(OpenApiAuthenticationExtension):
-    """Expose [`backend_app.auth.SimpleJWTAuthentication`](backend/backend_app/auth.py:35) as Bearer auth."""
+    """Expose [`backend_app.auth.SimpleJWTAuthentication`](backend/backend_app/auth.py#L35) as Bearer auth."""
 
     target_class = "backend_app.auth.SimpleJWTAuthentication"
     name = "bearerAuth"
@@ -18,4 +18,3 @@ class SimpleJWTAuthenticationScheme(OpenApiAuthenticationExtension):
             "scheme": "bearer",
             "bearerFormat": "JWT",
         }
-
