@@ -1,18 +1,22 @@
-from django.db import transaction
-from django.db.utils import IntegrityError
-from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
-from django.db.models import F, Sum
-from django.conf import settings
-from django.core.files.storage import default_storage
 from uuid import uuid4
 
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.db import transaction
+from django.db.models import F, Sum
+from django.db.utils import IntegrityError
+from django.utils import timezone
+
+import rest_framework
 from rest_framework import routers, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -27,13 +31,19 @@ from backend_app.domain.order_status import OrderStatus, can_transition
 from backend_app.serializers import (
     AccessTokenSerializer,
     AggregateReportSerializer,
+    AddressSerializer,
     CartItemSerializer,
     CartSummarySerializer,
+    CategorySerializer,
+    CheckoutRequestSerializer,
     ImageSerializer,
     ImageUploadSerializer,
+    LogoutSerializer,
     LoginSerializer,
     MarkPaidRequestSerializer,
     MarkPaidResponseSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     OrderSerializer,
     ProductSerializer,
     RegisterSerializer,
@@ -43,6 +53,8 @@ from backend_app.serializers import (
     TokenRefreshSerializer,
     TokenPairSerializer,
     UserSerializer,
+    WishlistItemSerializer,
+    SavedItemSerializer,
 )
 
 
@@ -249,8 +261,8 @@ class ProductViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
     # Used by DRF SearchFilter/OrderingFilter (configured in settings).
-    search_fields = ["name", "description"]
-    ordering_fields = ["name", "price", "created_at", "updated_at", "id"]
+    search_fields = ["name", "description", "sku"]
+    ordering_fields = ["name", "price", "created_at", "updated_at", "id", "sku"]
     ordering = ["-created_at"]
 
     def get_queryset(self):
@@ -258,7 +270,24 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Public catalog only shows active products.
         user = getattr(self.request, "user", None)
         if not user or not getattr(user, "is_admin", False):
-            return qs.filter(status="active")
+            qs = qs.filter(status="active", is_published=True)
+
+        category = self.request.query_params.get("category")
+        if category:
+            qs = qs.filter(category__slug=category)
+
+        min_price = self.request.query_params.get("min_price")
+        max_price = self.request.query_params.get("max_price")
+        if min_price:
+            try:
+                qs = qs.filter(price__gte=Decimal(min_price))
+            except Exception:
+                pass
+        if max_price:
+            try:
+                qs = qs.filter(price__lte=Decimal(max_price))
+            except Exception:
+                pass
         return qs
 
     @extend_schema(
@@ -357,6 +386,71 @@ class OrderViewSet(viewsets.ModelViewSet):
         if self.action in {"create", "update", "partial_update", "destroy"}:
             return [IsAdmin()]
         return [IsAuthenticated()]
+
+    @extend_schema(
+        tags=["orders"],
+        summary="Cancel order (customer)",
+        description="Allow a customer to cancel their own placed order before it is paid/shipped.",
+        responses={200: OrderSerializer, 400: OpenApiResponse(description="Invalid state")},
+    )
+    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated])
+    def cancel(self, request, pk=None):
+        try:
+            order = models.Order.objects.get(pk=pk)
+        except models.Order.DoesNotExist:
+            return Response({"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not (getattr(request.user, "is_admin", False) or order.user_id == request.user.id):
+            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+        if not can_transition(from_status=order.status, to_status=OrderStatus.CANCELLED):
+            return Response({"detail": "Cannot cancel in current status"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if order.status == OrderStatus.CANCELLED:
+            return Response(OrderSerializer(order, context={"request": request}).data)
+
+        # Release reserved stock.
+        with transaction.atomic():
+            order = models.Order.objects.select_for_update().get(pk=pk)
+            if not can_transition(from_status=order.status, to_status=OrderStatus.CANCELLED):
+                return Response({"detail": "Cannot cancel in current status"}, status=status.HTTP_400_BAD_REQUEST)
+            order.status = OrderStatus.CANCELLED
+            order.cancelled_at = timezone.now()
+            order.save(update_fields=["status", "cancelled_at", "updated_at"])
+
+            # Release reserved quantities
+            contents = list(models.OrderContent.objects.filter(order=order))
+            now = timezone.now()
+            for line in contents:
+                models.Product.objects.filter(id=line.product_id).update(
+                    reserved_qty=F("reserved_qty") - int(line.count),
+                    updated_at=now,
+                )
+
+        return Response(OrderSerializer(order, context={"request": request}).data)
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["addresses"], summary="List addresses"),
+    retrieve=extend_schema(tags=["addresses"], summary="Get address"),
+    create=extend_schema(tags=["addresses"], summary="Create address"),
+    update=extend_schema(tags=["addresses"], summary="Update address"),
+    partial_update=extend_schema(tags=["addresses"], summary="Patch address"),
+    destroy=extend_schema(tags=["addresses"], summary="Delete address"),
+)
+class AddressViewSet(viewsets.ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = models.Address.objects.all()
+        if not user or not getattr(user, "is_admin", False):
+            qs = qs.filter(user=user)
+        return qs.order_by("-is_default", "-updated_at")
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 @extend_schema_view(
     list=extend_schema(tags=["reviews"], summary="List reviews"),
@@ -565,7 +659,7 @@ def me(request):
     summary="Checkout",
     description=(
         "Create an order from the authenticated user's cart, reserve stock, and clear the cart. "
-        "Supports optional idempotency via the Idempotency-Key header."
+        "Supports optional idempotency via the Idempotency-Key header and accepts shipping/contact/payment fields."
     ),
     parameters=[
         OpenApiParameter(
@@ -576,8 +670,11 @@ def me(request):
             description="Optional idempotency key. If an order already exists for (user, key), it is returned.",
         )
     ],
-    request=None,
-    responses={201: OrderSerializer, 400: OpenApiResponse(description="Cart is empty / insufficient stock")},
+    request=CheckoutRequestSerializer,
+    responses={
+        201: OrderSerializer,
+        400: OpenApiResponse(description="Cart is empty / insufficient stock"),
+    },
 )
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -588,11 +685,63 @@ def checkout(request):
     """
 
     idempotency_key = request.headers.get("Idempotency-Key")
-
+    payload = CheckoutRequestSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
     try:
         order = _create_order_from_cart(user=request.user, idempotency_key=idempotency_key)
     except ValueError as exc:
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    updates = payload.validated_data
+
+    # Totals must be server-derived. Ignore client-supplied shipping/tax/discount to
+    # avoid undercharge/fraud. In this stub we keep them zeroed/unchanged.
+    shipping = Decimal("0")
+    tax = Decimal("0")
+    discount = Decimal("0")
+
+    subtotal = order.subtotal
+    total_base = subtotal + shipping + tax
+
+    order.shipping = shipping
+    order.tax = tax
+    order.discount = discount
+    order.total = total_base
+
+    for attr in [
+        "shipping_full_name",
+        "shipping_phone",
+        "shipping_address_line1",
+        "shipping_address_line2",
+        "shipping_city",
+        "shipping_state",
+        "shipping_postal_code",
+        "shipping_country",
+        "delivery_method",
+        "payment_method",
+        "contact_phone",
+    ]:
+        if updates.get(attr) is not None:
+            setattr(order, attr, updates[attr])
+
+    order.save(update_fields=[
+        "shipping",
+        "tax",
+        "discount",
+        "total",
+        "shipping_full_name",
+        "shipping_phone",
+        "shipping_address_line1",
+        "shipping_address_line2",
+        "shipping_city",
+        "shipping_state",
+        "shipping_postal_code",
+        "shipping_country",
+        "delivery_method",
+        "payment_method",
+        "contact_phone",
+        "updated_at",
+    ])
 
     serializer = OrderSerializer(order, context={"request": request})
     return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -774,3 +923,177 @@ router.register(r"images", ImageViewSet, basename="image")
 router.register(r"orders", OrderViewSet, basename="order")
 router.register(r"reviews", ReviewViewSet, basename="review")
 router.register(r"cart/items", CartItemViewSet, basename="cart-item")
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["wishlist"], summary="List wishlist items"),
+    create=extend_schema(tags=["wishlist"], summary="Add to wishlist"),
+    destroy=extend_schema(tags=["wishlist"], summary="Remove from wishlist"),
+)
+class WishlistViewSet(viewsets.ModelViewSet):
+    serializer_class = WishlistItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return models.WishlistItem.objects.filter(user=self.request.user).select_related("product")
+
+    def perform_create(self, serializer):
+        try:
+            serializer.save(user=self.request.user)
+        except IntegrityError:
+            raise ValidationError({"product_id": "Product is already in wishlist."})
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["saved"], summary="List saved items"),
+    create=extend_schema(tags=["saved"], summary="Save item for later"),
+    destroy=extend_schema(tags=["saved"], summary="Remove saved item"),
+)
+class SavedItemViewSet(viewsets.ModelViewSet):
+    serializer_class = SavedItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return models.SavedItem.objects.filter(user=self.request.user).select_related("product")
+
+    def perform_create(self, serializer):
+        try:
+            serializer.save(user=self.request.user)
+        except IntegrityError:
+            raise ValidationError({"product_id": "Product is already saved."})
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["categories"], summary="List categories"),
+    create=extend_schema(tags=["categories"], summary="Create category (admin)"),
+    update=extend_schema(tags=["categories"], summary="Update category (admin)"),
+    partial_update=extend_schema(tags=["categories"], summary="Patch category (admin)"),
+    destroy=extend_schema(tags=["categories"], summary="Delete category (admin)"),
+)
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = models.Category.objects.all()
+    serializer_class = CategorySerializer
+
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return []
+        return [IsAdmin()]
+
+
+@extend_schema(
+    tags=["auth"],
+    summary="Logout (blacklist refresh token)",
+    request=LogoutSerializer,
+    responses={204: OpenApiResponse(description="Logged out")},
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    serializer = LogoutSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    refresh_token = serializer.validated_data["refresh"]
+    try:
+        refresh_access_token(refresh_token=refresh_token)  # Validate token structure and blacklist state
+    except Exception:
+        return Response({"detail": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
+
+    from rest_framework_simplejwt.tokens import RefreshToken
+    try:
+        rt = RefreshToken(refresh_token)
+        jti = rt["jti"]
+        exp = rt["exp"]
+    except Exception:
+        return Response({"detail": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
+
+    models.BlacklistedToken.objects.get_or_create(
+        jti=jti,
+        defaults={
+            "user": request.user,
+            "token_type": "refresh",
+            "expires_at": timezone.datetime.fromtimestamp(exp, tz=timezone.utc),
+        },
+    )
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    tags=["auth"],
+    summary="Request password reset",
+    request=PasswordResetRequestSerializer,
+    responses={204: OpenApiResponse(description="Email sent")},
+)
+@api_view(["POST"])
+@permission_classes([])
+@throttle_classes([ScopedRateThrottle])
+def password_reset_request(request):
+    setattr(password_reset_request, "throttle_scope", "password_reset")
+    serializer = PasswordResetRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    email = serializer.validated_data["email"]
+    user = models.User.objects.filter(email=email).first()
+    if user:
+        now = timezone.now()
+
+        # Cleanup expired tokens globally to avoid unbounded growth.
+        models.PasswordResetToken.objects.filter(expires_at__lte=now).delete()
+
+        # Enforce per-user cap on active tokens.
+        max_tokens = int(getattr(settings, "PASSWORD_RESET_MAX_ACTIVE_TOKENS_PER_USER", 3))
+        if max_tokens >= 0:
+            excess_ids = list(
+                models.PasswordResetToken.objects.filter(
+                    user=user, used_at__isnull=True, expires_at__gt=now
+                )
+                .order_by("-created_at")
+                .values_list("pk", flat=True)[max_tokens:]
+            )
+            if excess_ids:
+                models.PasswordResetToken.objects.filter(pk__in=excess_ids).delete()
+
+        token = uuid4().hex
+        expiry = now + timedelta(hours=1)
+        models.PasswordResetToken.objects.create(user=user, token=token, expires_at=expiry)
+        # NOTE: In a real system we'd send email here.
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    tags=["auth"],
+    summary="Confirm password reset",
+    request=PasswordResetConfirmSerializer,
+    responses={200: OpenApiResponse(description="Password updated")},
+)
+@api_view(["POST"])
+@permission_classes([])
+@throttle_classes([ScopedRateThrottle])
+def password_reset_confirm(request):
+    setattr(password_reset_confirm, "throttle_scope", "password_reset")
+    serializer = PasswordResetConfirmSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    token = serializer.validated_data["token"]
+    password = serializer.validated_data["password"]
+    with transaction.atomic():
+        prt = (
+            models.PasswordResetToken.objects.select_for_update()
+            .filter(token=token, used_at__isnull=True, expires_at__gt=timezone.now())
+            .first()
+        )
+        if not prt:
+            return Response({"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = prt.user
+        from backend_app.security import hash_password
+
+        user.password_hash = hash_password(password)
+        user.tokens_invalidated_at = timezone.now()
+        user.save(update_fields=["password_hash", "tokens_invalidated_at", "updated_at"])
+        prt.used_at = timezone.now()
+        prt.save(update_fields=["used_at"])
+
+    return Response(status=status.HTTP_200_OK)
+
+
+router.register(r"wishlist", WishlistViewSet, basename="wishlist")
+router.register(r"saved", SavedItemViewSet, basename="saved")
+router.register(r"categories", CategoryViewSet, basename="category")
+router.register(r"addresses", AddressViewSet, basename="address")

@@ -144,22 +144,37 @@ class TokenRefreshSerializer(serializers.Serializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     image_ids = serializers.PrimaryKeyRelatedField(source="images", many=True, read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        source="category", queryset=models.Category.objects.all(), allow_null=True, required=False
+    )
 
     class Meta:
         model = models.Product
         fields = [
             "id",
+            "sku",
             "name",
             "description",
             "price",
             "status",
             "stock_qty",
             "reserved_qty",
+            "category_id",
+            "is_featured",
+            "is_published",
+            "availability",
             "image_ids",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["id", "reserved_qty", "image_ids", "created_at", "updated_at"]
+
+    def validate_sku(self, value):
+        if value is None or value == "":
+            return None
+        if models.Product.objects.filter(sku=value).exclude(pk=getattr(self.instance, "pk", None)).exists():
+            raise serializers.ValidationError("SKU is already taken.")
+        return value
 
 
 class OrderItemSerializer(serializers.Serializer):
@@ -171,6 +186,7 @@ class OrderSerializer(serializers.ModelSerializer):
     user_id = serializers.PrimaryKeyRelatedField(source="user", queryset=models.User.objects.all())
     product_ids = serializers.PrimaryKeyRelatedField(source="products", many=True, read_only=True)
     items = serializers.SerializerMethodField()
+    shipping_address = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Order
@@ -186,6 +202,18 @@ class OrderSerializer(serializers.ModelSerializer):
             "total",
             "product_ids",
             "items",
+            "shipping_full_name",
+            "shipping_phone",
+            "shipping_address_line1",
+            "shipping_address_line2",
+            "shipping_city",
+            "shipping_state",
+            "shipping_postal_code",
+            "shipping_country",
+            "delivery_method",
+            "payment_method",
+            "contact_phone",
+            "shipping_address",
             "placed_at",
             "paid_at",
             "cancelled_at",
@@ -223,6 +251,21 @@ class OrderSerializer(serializers.ModelSerializer):
             }
             for row in qs
         ]
+
+    @extend_schema_field(serializers.DictField(child=serializers.CharField(), allow_null=True))
+    def get_shipping_address(self, obj: models.Order):
+        if not obj.shipping_full_name:
+            return None
+        return {
+            "full_name": obj.shipping_full_name,
+            "phone": obj.shipping_phone,
+            "line1": obj.shipping_address_line1,
+            "line2": obj.shipping_address_line2,
+            "city": obj.shipping_city,
+            "state": obj.shipping_state,
+            "postal_code": obj.shipping_postal_code,
+            "country": obj.shipping_country,
+        }
 
     def validate(self, attrs):
         request = self.context.get("request")
@@ -276,6 +319,88 @@ class ReviewSerializer(serializers.ModelSerializer):
             if not eligible:
                 raise serializers.ValidationError({"product_id": "Review requires a paid order."})
 
+        return attrs
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    parent_id = serializers.PrimaryKeyRelatedField(
+        source="parent", queryset=models.Category.objects.all(), allow_null=True, required=False
+    )
+
+    class Meta:
+        model = models.Category
+        fields = ["id", "name", "slug", "parent_id", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    user_id = serializers.PrimaryKeyRelatedField(source="user", queryset=models.User.objects.all(), required=False)
+
+    class Meta:
+        model = models.Address
+        fields = [
+            "id",
+            "user_id",
+            "label",
+            "full_name",
+            "phone",
+            "line1",
+            "line2",
+            "city",
+            "state",
+            "postal_code",
+            "country",
+            "is_default",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if request and not getattr(request.user, "is_admin", False):
+            attrs["user"] = request.user
+        if attrs.get("is_default"):
+            # Ensure only one default per user
+            user = attrs.get("user") or getattr(self.instance, "user", None)
+            if user:
+                qs = models.Address.objects.filter(user=user, is_default=True)
+                if self.instance:
+                    qs = qs.exclude(pk=self.instance.pk)
+                if qs.exists():
+                    raise serializers.ValidationError({"is_default": "Default address already set."})
+        return attrs
+
+
+class WishlistItemSerializer(serializers.ModelSerializer):
+    user_id = serializers.PrimaryKeyRelatedField(source="user", queryset=models.User.objects.all(), required=False)
+    product_id = serializers.PrimaryKeyRelatedField(source="product", queryset=models.Product.objects.all())
+
+    class Meta:
+        model = models.WishlistItem
+        fields = ["id", "user_id", "product_id", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if request and not getattr(request.user, "is_admin", False):
+            attrs["user"] = request.user
+        return attrs
+
+
+class SavedItemSerializer(serializers.ModelSerializer):
+    user_id = serializers.PrimaryKeyRelatedField(source="user", queryset=models.User.objects.all(), required=False)
+    product_id = serializers.PrimaryKeyRelatedField(source="product", queryset=models.Product.objects.all())
+
+    class Meta:
+        model = models.SavedItem
+        fields = ["id", "user_id", "product_id", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if request and not getattr(request.user, "is_admin", False):
+            attrs["user"] = request.user
         return attrs
 
 
@@ -422,3 +547,30 @@ class ReadyzOkResponseSerializer(serializers.Serializer):
 class ReadyzNotReadyResponseSerializer(serializers.Serializer):
     status = serializers.CharField()
     pending_migrations = serializers.ListField(child=serializers.CharField())
+
+
+class CheckoutRequestSerializer(serializers.Serializer):
+    shipping_full_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_address_line1 = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_address_line2 = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_city = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_state = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_postal_code = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_country = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    delivery_method = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    payment_method = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    contact_phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    password = serializers.CharField(min_length=8)

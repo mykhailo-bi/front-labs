@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone as dt_timezone
 from typing import Optional, Tuple
 
 from rest_framework import authentication
@@ -29,6 +30,37 @@ def refresh_access_token(*, refresh_token: str) -> str:
     except TokenError as exc:
         raise AuthenticationFailed("Invalid refresh token") from exc
 
+    user_id = refresh.get(api_settings.USER_ID_CLAIM)
+    if user_id is None:
+        raise AuthenticationFailed("Invalid refresh token")
+
+    try:
+        user_id_int = int(user_id)
+    except (TypeError, ValueError) as exc:
+        raise AuthenticationFailed("Invalid refresh token") from exc
+
+    try:
+        user = models.User.objects.get(**{api_settings.USER_ID_FIELD: user_id_int})
+    except models.User.DoesNotExist as exc:
+        raise AuthenticationFailed("User not found") from exc
+
+    # Enforce blacklist on the refresh token JTI before issuing a new access token.
+    jti = refresh.get("jti")
+    exp = refresh.get("exp")
+
+    if jti and models.BlacklistedToken.objects.filter(jti=jti).exists():
+        raise AuthenticationFailed("Token has been revoked")
+
+    issued_at = refresh.get("iat")
+    if issued_at is None:
+        raise AuthenticationFailed("Invalid refresh token")
+
+    issued_dt = datetime.fromtimestamp(int(issued_at), tz=dt_timezone.utc)
+    if issued_dt < user.tokens_invalidated_at:
+        raise AuthenticationFailed("Token has been revoked")
+
+    # Optionally ensure refresh has not expired in DB terms if we stored exp; SimpleJWT
+    # already enforces signature/exp, so we just issue access after blacklist check.
     return str(refresh.access_token)
 
 
@@ -79,9 +111,15 @@ class SimpleJWTAuthentication(authentication.BaseAuthentication):
     def get_validated_token(self, raw_token: str) -> AccessToken:
         try:
             # AccessToken enforces token_type == 'access' and validates signature/expiry.
-            return AccessToken(raw_token)
+            token = AccessToken(raw_token)
         except TokenError as exc:
             raise AuthenticationFailed("Invalid token") from exc
+
+        jti = token.get("jti")
+        if jti and models.BlacklistedToken.objects.filter(jti=jti).exists():
+            raise AuthenticationFailed("Token has been revoked")
+
+        return token
 
     def get_user(self, validated_token: AccessToken) -> models.User:
         user_id = validated_token.get(api_settings.USER_ID_CLAIM)
@@ -94,6 +132,16 @@ class SimpleJWTAuthentication(authentication.BaseAuthentication):
             raise AuthenticationFailed("Invalid token user identification") from exc
 
         try:
-            return models.User.objects.get(**{api_settings.USER_ID_FIELD: user_id_int})
+            user = models.User.objects.get(**{api_settings.USER_ID_FIELD: user_id_int})
         except models.User.DoesNotExist as exc:
             raise AuthenticationFailed("User not found") from exc
+
+        issued_at = validated_token.get("iat")
+        if issued_at is None:
+            raise AuthenticationFailed("Invalid token")
+
+        issued_dt = datetime.fromtimestamp(int(issued_at), tz=dt_timezone.utc)
+        if issued_dt < user.tokens_invalidated_at:
+            raise AuthenticationFailed("Token has been revoked")
+
+        return user

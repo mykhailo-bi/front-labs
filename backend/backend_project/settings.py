@@ -125,6 +125,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': os.getenv('API_THROTTLE_ANON', '60/min'),
         'user': os.getenv('API_THROTTLE_USER', '600/min'),
+        # Dedicated scope for password reset endpoints to mitigate abuse.
+        'password_reset': os.getenv('API_THROTTLE_PASSWORD_RESET', '10/hour'),
     },
     # Avoid importing/using Django's auth AnonymousUser.
     'UNAUTHENTICATED_USER': None,

@@ -5,6 +5,8 @@
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
 #   * Remove `` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
+import datetime
+
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models import Q
@@ -24,6 +26,7 @@ class Cart(models.Model):
         
         db_table = 'cart'
         unique_together = (('user', 'product'),)
+        indexes = [models.Index(fields=["user"], name="cart_user_idx")]
 
 
 class Image(models.Model):
@@ -34,6 +37,18 @@ class Image(models.Model):
     class Meta:
         
         db_table = 'image'
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=64)
+    slug = models.CharField(max_length=64, unique=True)
+    parent = models.ForeignKey('self', models.SET_NULL, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'category'
+        indexes = [models.Index(fields=["slug"], name="category_slug_idx")]
 
 
 class Order(models.Model):
@@ -51,6 +66,19 @@ class Order(models.Model):
     tax = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    # Shipping/contact/payment snapshot for confirmation page.
+    shipping_full_name = models.CharField(max_length=128, blank=True, null=True)
+    shipping_phone = models.CharField(max_length=32, blank=True, null=True)
+    shipping_address_line1 = models.CharField(max_length=255, blank=True, null=True)
+    shipping_address_line2 = models.CharField(max_length=255, blank=True, null=True)
+    shipping_city = models.CharField(max_length=64, blank=True, null=True)
+    shipping_state = models.CharField(max_length=64, blank=True, null=True)
+    shipping_postal_code = models.CharField(max_length=32, blank=True, null=True)
+    shipping_country = models.CharField(max_length=64, blank=True, null=True)
+    delivery_method = models.CharField(max_length=32, blank=True, null=True)
+    payment_method = models.CharField(max_length=32, blank=True, null=True)
+    contact_phone = models.CharField(max_length=32, blank=True, null=True)
 
     idempotency_key = models.CharField(max_length=64, blank=True, null=True)
 
@@ -73,6 +101,7 @@ class Order(models.Model):
                 name="uniq_order_user_idempotency_key_not_null",
             ),
         ]
+        indexes = [models.Index(fields=["user", "created_at"], name="order_user_created_idx")]
 
 
 class OrderContent(models.Model):
@@ -84,9 +113,14 @@ class OrderContent(models.Model):
         
         db_table = 'order_content'
         unique_together = (('order', 'product'),)
+        indexes = [
+            models.Index(fields=["order"], name="ordercontent_order_idx"),
+            models.Index(fields=["product"], name="ordercontent_product_idx"),
+        ]
 
 
 class Product(models.Model):
+    sku = models.CharField(max_length=32, unique=True, blank=True, null=True)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -94,6 +128,19 @@ class Product(models.Model):
     status = models.CharField(max_length=16, default="active")
     stock_qty = models.IntegerField(default=0)
     reserved_qty = models.IntegerField(default=0)
+
+    category = models.ForeignKey(Category, models.SET_NULL, blank=True, null=True)
+    is_featured = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=True)
+    availability = models.CharField(
+        max_length=16,
+        default="in_stock",
+        choices=(
+            ("in_stock", "In stock"),
+            ("preorder", "Preorder"),
+            ("discontinued", "Discontinued"),
+        ),
+    )
 
     images = models.ManyToManyField(Image, through='ProductImage')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -109,6 +156,8 @@ class Product(models.Model):
         ]
         indexes = [
             models.Index(fields=["status"], name="product_status_idx"),
+            models.Index(fields=["is_published"], name="product_is_published_idx"),
+            models.Index(fields=["category"], name="product_category_idx"),
         ]
 
 
@@ -168,6 +217,9 @@ class User(models.Model):
     description = models.TextField(blank=True, null=True)
     phone = models.CharField(unique=True, max_length=16, blank=True, null=True)
     is_admin = models.BooleanField(default=False)
+    tokens_invalidated_at = models.DateTimeField(
+        default=datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     avatar = models.ForeignKey(Image, models.SET_NULL, blank=True, null=True)
@@ -189,6 +241,46 @@ class User(models.Model):
         return False
 
 
+class Address(models.Model):
+    user = models.ForeignKey(User, models.CASCADE)
+    label = models.CharField(max_length=64, blank=True, null=True)
+    full_name = models.CharField(max_length=128)
+    phone = models.CharField(max_length=32)
+    line1 = models.CharField(max_length=255)
+    line2 = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=64)
+    state = models.CharField(max_length=64, blank=True, null=True)
+    postal_code = models.CharField(max_length=32)
+    country = models.CharField(max_length=64)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "address"
+        indexes = [models.Index(fields=["user"], name="address_user_idx")]
+
+
+class WishlistItem(models.Model):
+    user = models.ForeignKey(User, models.CASCADE)
+    product = models.ForeignKey(Product, models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "wishlist_item"
+        unique_together = (('user', 'product'),)
+
+
+class SavedItem(models.Model):
+    user = models.ForeignKey(User, models.CASCADE)
+    product = models.ForeignKey(Product, models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "saved_item"
+        unique_together = (('user', 'product'),)
+
+
 class PaymentAttempt(models.Model):
     """A minimal payment record for the payment stub flow."""
 
@@ -208,3 +300,27 @@ class PaymentAttempt(models.Model):
                 name="uniq_payment_attempt_order_idempotency_key_not_null",
             ),
         ]
+
+
+class BlacklistedToken(models.Model):
+    user = models.ForeignKey(User, models.CASCADE, blank=True, null=True)
+    jti = models.CharField(max_length=255, unique=True)
+    token_type = models.CharField(max_length=16)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "blacklisted_token"
+        indexes = [models.Index(fields=["expires_at"], name="blacklisted_token_exp_idx")]
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(User, models.CASCADE)
+    token = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "password_reset_token"
+        indexes = [models.Index(fields=["expires_at"], name="password_reset_exp_idx")]
