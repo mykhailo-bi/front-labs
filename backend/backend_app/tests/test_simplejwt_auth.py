@@ -32,9 +32,16 @@ class SimpleJWTAuthenticationTests:
 
         assert self.auth.get_raw_token(header) == "token"
 
+        request_bytes = type("R", (), {"META": {"HTTP_AUTHORIZATION": b"Bearer token"}})()
+        header_bytes = self.auth.get_header(request_bytes)
+        assert header_bytes == b"Bearer token"
+
     def test_get_raw_token_invalid_header(self):
         with pytest.raises(drf_exc.AuthenticationFailed):
             self.auth.get_raw_token(b"Bearer too many parts")
+
+    def test_get_raw_token_empty_header(self):
+        assert self.auth.get_raw_token(b"") is None
 
     def test_get_raw_token_wrong_type(self):
         assert self.auth.get_raw_token(b"Basic token") is None

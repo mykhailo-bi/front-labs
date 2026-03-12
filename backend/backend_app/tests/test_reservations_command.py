@@ -84,3 +84,55 @@ class ReservationExpiryCommandTests:
         with mock.patch.object(cmd, "stdout") as stdout:
             cmd.handle(limit=10)
             assert stdout.write.called
+
+    def test_release_expired_reservations_status_changes_under_lock(self):
+        order = models.Order.objects.create(
+            user=self.user,
+            status=OrderStatus.PLACED,
+            reservation_expires_at=timezone.now() - timedelta(seconds=1),
+        )
+        models.OrderContent.objects.create(order=order, product=self.product, count=1)
+
+        order.status = OrderStatus.PAID
+
+        cmd = release_cmd.Command()
+        with mock.patch.object(cmd, "stdout") as stdout, mock.patch(
+            "backend_app.management.commands.release_expired_reservations.Order.objects.select_for_update"
+        ) as select_for_update:
+            select_for_update.return_value.get.return_value = order
+            cmd.handle(limit=10)
+            assert stdout.write.called
+
+    def test_release_expired_reservations_expiry_changes_under_lock(self):
+        order = models.Order.objects.create(
+            user=self.user,
+            status=OrderStatus.PLACED,
+            reservation_expires_at=timezone.now() - timedelta(seconds=1),
+        )
+        models.OrderContent.objects.create(order=order, product=self.product, count=1)
+
+        order.reservation_expires_at = timezone.now() + timedelta(minutes=5)
+
+        cmd = release_cmd.Command()
+        with mock.patch.object(cmd, "stdout") as stdout, mock.patch(
+            "backend_app.management.commands.release_expired_reservations.Order.objects.select_for_update"
+        ) as select_for_update:
+            select_for_update.return_value.get.return_value = order
+            cmd.handle(limit=10)
+            assert stdout.write.called
+
+    def test_release_expired_reservations_missing_product(self):
+        order = models.Order.objects.create(
+            user=self.user,
+            status=OrderStatus.PLACED,
+            reservation_expires_at=timezone.now() - timedelta(seconds=1),
+        )
+        models.OrderContent.objects.create(order=order, product=self.product, count=1)
+
+        cmd = release_cmd.Command()
+        with mock.patch.object(cmd, "stdout") as stdout, mock.patch(
+            "backend_app.management.commands.release_expired_reservations.Product.objects.select_for_update"
+        ) as select_for_update:
+            select_for_update.return_value.filter.return_value = []
+            cmd.handle(limit=10)
+            assert stdout.write.called

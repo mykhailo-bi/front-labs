@@ -30,3 +30,14 @@ class ExceptionsAdditionalTests:
         assert wrapped.status_code == 429
         assert wrapped.data["code"] == "throttled"
         assert wrapped.data["message"] == "Request was throttled."
+
+    def test_request_id_from_context_no_request(self):
+        assert exc_module._request_id_from_context({}) is None
+
+    def test_exception_handler_uses_generic_message_when_detail_missing(self):
+        exc = drf_exc.APIException()
+        exc.default_code = "custom"
+
+        response = exc_module.drf_exception_handler(exc, self._ctx("rid-generic"))
+        assert response.data["code"] == "custom"
+        assert response.data["message"] == "A server error occurred."

@@ -67,6 +67,7 @@ class AuthHelperTests:
                 auth_module.refresh_access_token(refresh_token=pair.refresh)
 
     def test_refresh_access_token_user_not_found_branch(self):
-        with mock.patch("backend_app.auth.RefreshToken", side_effect=TokenError("bad")):
+        pair = issue_token_pair(user=self.user)
+        with mock.patch("backend_app.auth.models.User.objects.get", side_effect=models.User.DoesNotExist):
             with pytest.raises(drf_exc.AuthenticationFailed):
-                auth_module.refresh_access_token(refresh_token="missing")
+                auth_module.refresh_access_token(refresh_token=pair.refresh)

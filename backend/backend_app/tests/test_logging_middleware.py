@@ -63,3 +63,16 @@ class LoggingAndMiddlewareUnitTests:
         assert request_bad.request_id != bad
         assert uuid.UUID(request_bad.request_id)
         assert response_bad[middleware_module.RequestIdMiddleware.response_header] == request_bad.request_id
+
+    def test_request_id_middleware_non_string_and_response_without_header_support(self):
+        def get_response(_req):
+            class DummyResponse:
+                pass
+
+            return DummyResponse()
+
+        mw = middleware_module.RequestIdMiddleware(get_response)
+        request = SimpleNamespace(META={middleware_module.RequestIdMiddleware.header_name: 123})
+        response = mw(request)
+        assert uuid.UUID(request.request_id)
+        assert response is not None
