@@ -6,6 +6,7 @@ and initializes Django before tests import Django/DRF modules.
 
 import os
 
+import pytest
 
 # Default to in-memory SQLite for tests unless caller overrides.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend_project.settings")
@@ -28,3 +29,8 @@ django.setup()
 
 # Ensure database schema is ready for tests (in-memory sqlite).
 call_command("migrate", run_syncdb=True, verbosity=0)
+
+
+@pytest.fixture(autouse=True)
+def _flush_db():
+    call_command("flush", verbosity=0, interactive=False)

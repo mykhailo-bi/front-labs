@@ -1,4 +1,5 @@
 import pytest
+from decimal import Decimal
 from django.test import override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
