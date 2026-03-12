@@ -1,9 +1,12 @@
 from datetime import timedelta
 from decimal import Decimal
 from uuid import uuid4
+import csv
+from io import StringIO
 
 from django.conf import settings
 from django.core.files.storage import default_storage
+from django.http import HttpResponse
 from django.db import transaction
 from django.db.models import F, Sum
 from django.db.utils import IntegrityError
@@ -27,6 +30,7 @@ from drf_spectacular.utils import (
 
 from backend_app import models
 from backend_app.auth import TokenPair, issue_token_pair, refresh_access_token
+from backend_app.security import hash_password, verify_password
 from backend_app.domain.order_status import OrderStatus, can_transition
 from backend_app.serializers import (
     AccessTokenSerializer,
@@ -46,15 +50,24 @@ from backend_app.serializers import (
     PasswordResetRequestSerializer,
     OrderSerializer,
     ProductSerializer,
+    RefundRequestSerializer,
+    OrderEventSerializer,
+    CustomerMarkPaidSerializer,
+    UserInviteSerializer,
     RegisterSerializer,
     RegisterResponseSerializer,
     ReviewSerializer,
     SetProductImagesSerializer,
+    ProductImageAltTextSerializer,
     TokenRefreshSerializer,
     TokenPairSerializer,
     UserSerializer,
     WishlistItemSerializer,
     SavedItemSerializer,
+    ChangePasswordSerializer,
+    EmailVerificationRequestSerializer,
+    EmailVerificationConfirmSerializer,
+    MeSerializer,
 )
 
 
@@ -149,16 +162,57 @@ def _create_order_from_cart(*, user: models.User, idempotency_key: str | None = 
         reservation_ttl_seconds = int(getattr(settings, "ORDER_RESERVATION_TTL_SECONDS", 30 * 60))
         reservation_expires_at = timezone.now() + timedelta(seconds=reservation_ttl_seconds)
 
+        def _get_order_currency() -> str:
+            return str(getattr(settings, "ORDER_CURRENCY", "USD") or "USD")
+
+        def _get_base_currency() -> str:
+            return str(getattr(settings, "ORDER_BASE_CURRENCY", "USD") or "USD")
+
+        def _get_fx_rate() -> Decimal:
+            raw = getattr(settings, "ORDER_FX_RATE", "1")
+            try:
+                return Decimal(str(raw))
+            except Exception:
+                return Decimal("1")
+
+        def _dec_from_setting(name: str, default: str = "0") -> Decimal:
+            raw = getattr(settings, name, default)
+            try:
+                return Decimal(str(raw))
+            except Exception:
+                return Decimal(default)
+
+        def _calc_shipping(subtotal_amount: Decimal) -> Decimal:
+            flat = _dec_from_setting("ORDER_SHIPPING_FLAT", "0")
+            return flat if subtotal_amount > 0 else Decimal("0")
+
+        def _calc_tax(subtotal_amount: Decimal) -> Decimal:
+            rate = _dec_from_setting("ORDER_TAX_RATE", "0")
+            return (subtotal_amount * rate).quantize(Decimal("0.01"))
+
+        def _calc_discount(subtotal_amount: Decimal) -> Decimal:
+            rate = _dec_from_setting("ORDER_DISCOUNT_RATE", "0")
+            return (subtotal_amount * rate).quantize(Decimal("0.01"))
+
+        shipping = _calc_shipping(subtotal)
+        tax = _calc_tax(subtotal)
+        discount = _calc_discount(subtotal)
+        total = subtotal + shipping + tax - discount
+        base_currency = _get_base_currency()
+        fx_rate = _get_fx_rate()
+
         try:
             order = models.Order.objects.create(
                 user=user,
                 status=OrderStatus.PLACED,
-                currency="USD",
+                currency=_get_order_currency(),
+                base_currency=base_currency,
+                fx_rate=fx_rate,
                 subtotal=subtotal,
-                shipping=0,
-                tax=0,
-                discount=0,
-                total=subtotal,
+                shipping=shipping,
+                tax=tax,
+                discount=discount,
+                total=total,
                 idempotency_key=idempotency_key or None,
                 placed_at=timezone.now(),
                 reservation_expires_at=reservation_expires_at,
@@ -246,6 +300,138 @@ class UserViewSet(viewsets.ModelViewSet):
             )
         return Response(OrderSerializer(qs, many=True, context={"request": request}).data)
 
+    @extend_schema(
+        tags=["users"],
+        summary="Invite user (admin)",
+        request=UserInviteSerializer,
+        responses={201: UserInviteSerializer},
+    )
+    @action(detail=False, methods=["post"], url_path="invites", permission_classes=[IsAdmin])
+    def invite(self, request):
+        serializer = UserInviteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = uuid4().hex
+        expiry = timezone.now() + timedelta(days=7)
+        try:
+            invite = models.UserInvite.objects.create(
+                email=serializer.validated_data["email"],
+                role=serializer.validated_data.get("role", "customer"),
+                token=token,
+                expires_at=expiry,
+            )
+        except IntegrityError:
+            return Response({"email": "Invite already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(UserInviteSerializer(invite).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        tags=["users"],
+        summary="Export users (CSV, admin)",
+        responses={200: OpenApiResponse(description="CSV export")},
+    )
+    @action(detail=False, methods=["get"], url_path="export", permission_classes=[IsAdmin])
+    def export_users(self, request):
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "id",
+            "username",
+            "email",
+            "firstname",
+            "lastname",
+            "phone",
+            "role",
+            "status",
+            "is_admin",
+            "is_email_verified",
+        ])
+        for user in models.User.objects.all().order_by("id"):
+            writer.writerow([
+                user.id,
+                user.username,
+                user.email,
+                user.firstname or "",
+                user.lastname or "",
+                user.phone or "",
+                user.role,
+                user.status,
+                int(user.is_admin),
+                int(user.is_email_verified),
+            ])
+        resp = HttpResponse(output.getvalue(), content_type="text/csv")
+        resp["Content-Disposition"] = "attachment; filename=users.csv"
+        return resp
+
+    @extend_schema(
+        tags=["users"],
+        summary="Import users (CSV, admin)",
+        request=None,
+        responses={200: OpenApiResponse(description="Import result")},
+    )
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="import",
+        permission_classes=[IsAdmin],
+        parser_classes=[FormParser, MultiPartParser],
+    )
+    def import_users(self, request):
+        upload = request.FILES.get("file")
+        if upload is None:
+            return Response({"file": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        max_bytes = int(getattr(settings, "CSV_IMPORT_MAX_BYTES", 2 * 1024 * 1024))
+        max_rows = int(getattr(settings, "CSV_IMPORT_MAX_ROWS", 1000))
+
+        raw = upload.read()
+        if max_bytes >= 0 and len(raw) > max_bytes:
+            return Response({"detail": "CSV file is too large."}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = raw.decode("utf-8")
+        reader = csv.DictReader(StringIO(data))
+        created = 0
+        updated = 0
+        password_default = getattr(settings, "USER_INVITE_DEFAULT_PASSWORD", None)
+        errors: list[dict[str, object]] = []
+        for idx, row in enumerate(reader, start=1):
+            if max_rows >= 0 and idx > max_rows:
+                return Response({"detail": "CSV row limit exceeded."}, status=status.HTTP_400_BAD_REQUEST)
+            email = (row.get("email") or "").strip()
+            if not email:
+                continue
+            raw_password = (row.get("password") or "").strip()
+            if not raw_password:
+                raw_password = password_default or uuid4().hex
+            password_hash = hash_password(raw_password)
+            defaults = {
+                "username": row.get("username") or email.split("@")[0],
+                "firstname": row.get("firstname") or None,
+                "lastname": row.get("lastname") or None,
+                "phone": row.get("phone") or None,
+                "role": row.get("role") or "customer",
+                "status": row.get("status") or "active",
+                "is_admin": bool(int(row.get("is_admin") or 0)),
+                "is_email_verified": bool(int(row.get("is_email_verified") or 0)),
+                "password_hash": password_hash,
+            }
+            try:
+                obj, created_flag = models.User.objects.update_or_create(email=email, defaults=defaults)
+                created += int(created_flag)
+                updated += int(not created_flag)
+            except IntegrityError:
+                errors.append({"row": idx, "email": email, "detail": "Unique constraint violation."})
+
+        if errors:
+            return Response(
+                {
+                    "created": created,
+                    "updated": updated,
+                    "errors": errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({"created": created, "updated": updated})
+
 
 @extend_schema_view(
     list=extend_schema(tags=["products"], summary="List products"),
@@ -289,6 +475,114 @@ class ProductViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
         return qs
+
+    @extend_schema(
+        tags=["products"],
+        summary="Archive product (admin)",
+        responses={200: ProductSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="archive", permission_classes=[IsAdmin])
+    def archive(self, request, pk=None):
+        product = self.get_object()
+        product.status = "archived"
+        product.save(update_fields=["status", "updated_at"])
+        return Response(ProductSerializer(product, context={"request": request}).data)
+
+    @extend_schema(
+        tags=["products"],
+        summary="Export products (CSV, admin)",
+        responses={200: OpenApiResponse(description="CSV export")},
+    )
+    @action(detail=False, methods=["get"], url_path="export", permission_classes=[IsAdmin])
+    def export_csv(self, request):
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "id",
+            "sku",
+            "name",
+            "description",
+            "price",
+            "status",
+            "stock_qty",
+            "reserved_qty",
+            "category_id",
+            "is_featured",
+            "is_published",
+            "availability",
+        ])
+        for product in models.Product.objects.all().order_by("id"):
+            writer.writerow([
+                product.id,
+                product.sku or "",
+                product.name,
+                product.description or "",
+                product.price,
+                product.status,
+                product.stock_qty,
+                product.reserved_qty,
+                product.category_id or "",
+                int(product.is_featured),
+                int(product.is_published),
+                product.availability,
+            ])
+        resp = HttpResponse(output.getvalue(), content_type="text/csv")
+        resp["Content-Disposition"] = "attachment; filename=products.csv"
+        return resp
+
+    @extend_schema(
+        tags=["products"],
+        summary="Import products (CSV, admin)",
+        request=None,
+        responses={200: OpenApiResponse(description="Import result")},
+    )
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="import",
+        permission_classes=[IsAdmin],
+        parser_classes=[FormParser, MultiPartParser],
+    )
+    def import_csv(self, request):
+        upload = request.FILES.get("file")
+        if upload is None:
+            return Response({"file": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        max_bytes = int(getattr(settings, "CSV_IMPORT_MAX_BYTES", 2 * 1024 * 1024))
+        max_rows = int(getattr(settings, "CSV_IMPORT_MAX_ROWS", 1000))
+
+        raw = upload.read()
+        if max_bytes >= 0 and len(raw) > max_bytes:
+            return Response({"detail": "CSV file is too large."}, status=status.HTTP_400_BAD_REQUEST)
+
+        data = raw.decode("utf-8")
+        reader = csv.DictReader(StringIO(data))
+        created = 0
+        updated = 0
+        for idx, row in enumerate(reader, start=1):
+            if max_rows >= 0 and idx > max_rows:
+                return Response({"detail": "CSV row limit exceeded."}, status=status.HTTP_400_BAD_REQUEST)
+            sku = (row.get("sku") or "").strip() or None
+            defaults = {
+                "name": row.get("name") or "",
+                "description": row.get("description") or None,
+                "price": row.get("price") or "0",
+                "status": row.get("status") or "active",
+                "stock_qty": int(row.get("stock_qty") or 0),
+                "reserved_qty": int(row.get("reserved_qty") or 0),
+                "category_id": int(row.get("category_id") or 0) or None,
+                "is_featured": bool(int(row.get("is_featured") or 0)),
+                "is_published": bool(int(row.get("is_published") or 1)),
+                "availability": row.get("availability") or "in_stock",
+            }
+            if sku:
+                obj, created_flag = models.Product.objects.update_or_create(sku=sku, defaults=defaults)
+            else:
+                obj = models.Product.objects.create(**defaults)
+                created_flag = True
+            created += int(created_flag)
+            updated += int(not created_flag)
+        return Response({"created": created, "updated": updated})
 
     @extend_schema(
         tags=["reviews", "products"],
@@ -356,6 +650,29 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         return Response(ProductSerializer(product, context={"request": request}).data)
 
+    @extend_schema(
+        tags=["products"],
+        summary="Set product image alt text",
+        request=ProductImageAltTextSerializer,
+        responses={200: ProductSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="images/alt-text", permission_classes=[IsAdmin])
+    def set_image_alt_text(self, request, pk=None):
+        product = self.get_object()
+        serializer = ProductImageAltTextSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        image_id = serializer.validated_data["image_id"]
+        alt_text = serializer.validated_data.get("alt_text")
+
+        try:
+            product_image = models.ProductImage.objects.get(product=product, image_id=image_id)
+        except models.ProductImage.DoesNotExist:
+            return Response({"detail": "Image not associated with product."}, status=status.HTTP_404_NOT_FOUND)
+
+        product_image.alt_text = alt_text
+        product_image.save(update_fields=["alt_text", "updated_at"])
+        return Response(ProductSerializer(product, context={"request": request}).data)
+
 
 @extend_schema_view(
     list=extend_schema(tags=["orders"], summary="List orders"),
@@ -379,6 +696,57 @@ class OrderViewSet(viewsets.ModelViewSet):
             return qs.none()
         if getattr(user, "is_admin", False):
             return qs
+        return qs.filter(user=user)
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        return ctx
+
+    @extend_schema(
+        tags=["orders"],
+        summary="Ship order (admin)",
+        request=None,
+        responses={200: OrderSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="ship", permission_classes=[IsAdmin])
+    def ship(self, request, pk=None):
+        order = self.get_object()
+        if not can_transition(from_status=order.status, to_status=OrderStatus.SHIPPED):
+            return Response({"detail": "Invalid status transition"}, status=status.HTTP_409_CONFLICT)
+        order.status = OrderStatus.SHIPPED
+        order.shipped_at = timezone.now()
+        order.save(update_fields=["status", "shipped_at", "updated_at"])
+        models.OrderEvent.objects.create(order=order, event_type="shipped")
+        return Response(OrderSerializer(order, context={"request": request}).data)
+
+    @extend_schema(
+        tags=["orders"],
+        summary="Deliver order (admin)",
+        request=None,
+        responses={200: OrderSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="deliver", permission_classes=[IsAdmin])
+    def deliver(self, request, pk=None):
+        order = self.get_object()
+        if not can_transition(from_status=order.status, to_status=OrderStatus.DELIVERED):
+            return Response({"detail": "Invalid status transition"}, status=status.HTTP_409_CONFLICT)
+        order.status = OrderStatus.DELIVERED
+        order.delivered_at = timezone.now()
+        order.save(update_fields=["status", "delivered_at", "updated_at"])
+        models.OrderEvent.objects.create(order=order, event_type="delivered")
+        return Response(OrderSerializer(order, context={"request": request}).data)
+
+    @extend_schema(
+        tags=["orders"],
+        summary="Approve refund (admin)",
+        request=None,
+        responses={200: OrderSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="refund-approve", permission_classes=[IsAdmin])
+    def admin_refund(self, request, pk=None):
+        order = self.get_object()
+        models.OrderEvent.objects.create(order=order, event_type="refund_approved")
+        return Response(OrderSerializer(order, context={"request": request}).data)
         return qs.filter(user=user)
 
     def get_permissions(self):
@@ -427,7 +795,156 @@ class OrderViewSet(viewsets.ModelViewSet):
                     updated_at=now,
                 )
 
+            models.OrderEvent.objects.create(order=order, event_type="cancelled")
+
         return Response(OrderSerializer(order, context={"request": request}).data)
+
+    @extend_schema(
+        tags=["orders", "payments"],
+        summary="Mark order as paid (customer stub)",
+        description=(
+            "Customer-facing stub payment that marks an order as paid. "
+            "Uses the same idempotent stub flow as admin mark_paid."
+        ),
+        request=CustomerMarkPaidSerializer,
+        responses={200: MarkPaidResponseSerializer, 404: OpenApiResponse(description="Order not found")},
+    )
+    @action(detail=True, methods=["post"], url_path="pay", permission_classes=[IsAuthenticated])
+    def pay(self, request, pk=None):
+        serializer = CustomerMarkPaidSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order_id = int(pk)
+        idempotency_key = request.headers.get("Idempotency-Key") or serializer.validated_data.get(
+            "idempotency_key"
+        )
+        reference_id = serializer.validated_data.get("reference_id")
+        if idempotency_key is not None and not str(idempotency_key).strip():
+            idempotency_key = None
+
+        try:
+            order = models.Order.objects.get(id=order_id)
+        except models.Order.DoesNotExist:
+            return Response({"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if order.user_id != request.user.id:
+            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Reuse the admin stub logic by calling mark_paid implementation directly
+        with transaction.atomic():
+            if idempotency_key:
+                existing = models.PaymentAttempt.objects.filter(
+                    order=order, idempotency_key=idempotency_key
+                ).first()
+                if existing:
+                    if order.status != OrderStatus.PAID:
+                        if not can_transition(from_status=order.status, to_status=OrderStatus.PAID):
+                            return Response(
+                                {"detail": f"Invalid status transition: {order.status} -> {OrderStatus.PAID}."},
+                                status=status.HTTP_409_CONFLICT,
+                            )
+                        order.status = OrderStatus.PAID
+                        order.paid_at = timezone.now()
+                        order.save(update_fields=["status", "paid_at", "updated_at"])
+
+                    return Response(
+                        {
+                            "order": OrderSerializer(order, context={"request": request}).data,
+                            "payment_attempt_id": existing.id,
+                        }
+                    )
+
+            if order.status == OrderStatus.PAID:
+                return Response({"order": OrderSerializer(order, context={"request": request}).data})
+
+            try:
+                attempt = models.PaymentAttempt.objects.create(
+                    order=order,
+                    provider="stub",
+                    status="succeeded",
+                    reference_id=reference_id,
+                    idempotency_key=idempotency_key or None,
+                )
+            except IntegrityError:
+                if not idempotency_key:
+                    raise
+                attempt = models.PaymentAttempt.objects.get(order=order, idempotency_key=idempotency_key)
+
+            if not can_transition(from_status=order.status, to_status=OrderStatus.PAID):
+                return Response(
+                    {"detail": f"Invalid status transition: {order.status} -> {OrderStatus.PAID}."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            order.status = OrderStatus.PAID
+            order.paid_at = timezone.now()
+            order.save(update_fields=["status", "paid_at", "updated_at"])
+
+            models.OrderEvent.objects.create(order=order, event_type="paid", note=reference_id or None)
+
+            return Response(
+                {
+                    "order": OrderSerializer(order, context={"request": request}).data,
+                    "payment_attempt_id": attempt.id,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+    @extend_schema(
+        tags=["orders"],
+        summary="Download invoice (stub)",
+        description="Return a minimal text invoice for the order.",
+        responses={200: OpenApiResponse(description="Invoice text")},
+    )
+    @action(detail=True, methods=["get"], url_path="invoice", permission_classes=[IsAuthenticated])
+    def invoice(self, request, pk=None):
+        order = self.get_object()
+        if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
+            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+        content = (
+            f"Invoice for Order #{order.id}\n"
+            f"Status: {order.status}\n"
+            f"Subtotal: {order.subtotal}\n"
+            f"Shipping: {order.shipping}\n"
+            f"Tax: {order.tax}\n"
+            f"Discount: {order.discount}\n"
+            f"Total: {order.total}\n"
+        )
+        return Response({"invoice": content})
+
+    @extend_schema(
+        tags=["orders"],
+        summary="Request refund",
+        request=RefundRequestSerializer,
+        responses={201: RefundRequestSerializer},
+    )
+    @action(detail=True, methods=["post"], url_path="refund", permission_classes=[IsAuthenticated])
+    def refund(self, request, pk=None):
+        order = self.get_object()
+        if order.user_id != request.user.id:
+            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = RefundRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        obj = models.RefundRequest.objects.create(
+            order=order,
+            user=request.user,
+            reason=serializer.validated_data.get("reason"),
+        )
+        models.OrderEvent.objects.create(order=order, event_type="refund_requested", note=obj.reason or None)
+        return Response(RefundRequestSerializer(obj).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        tags=["orders"],
+        summary="List order timeline",
+        responses={200: OrderEventSerializer(many=True)},
+    )
+    @action(detail=True, methods=["get"], url_path="timeline", permission_classes=[IsAuthenticated])
+    def timeline(self, request, pk=None):
+        order = self.get_object()
+        if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
+            return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        events = models.OrderEvent.objects.filter(order=order).order_by("created_at")
+        return Response(OrderEventSerializer(events, many=True).data)
 
 
 @extend_schema_view(
@@ -632,16 +1149,16 @@ def token_refresh(request):
     tags=["users"],
     summary="Update current user",
     description="Partially update editable profile fields for the authenticated user.",
-    request=UserSerializer,
-    responses={200: UserSerializer},
+    request=MeSerializer,
+    responses={200: MeSerializer},
 )
 @api_view(["GET", "PATCH"])
 @permission_classes([IsAuthenticated])
 def me(request):
     if request.method == "GET":
-        return Response(UserSerializer(request.user).data)
+        return Response(MeSerializer(request.user).data)
 
-    serializer = UserSerializer(request.user, data=request.data, partial=True)
+    serializer = MeSerializer(request.user, data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
     try:
         serializer.save()
@@ -652,6 +1169,35 @@ def me(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
     return Response(serializer.data)
+
+
+@extend_schema(
+    tags=["auth"],
+    summary="Change password",
+    description="Change password for the authenticated user. Requires current password and invalidates prior tokens.",
+    request=ChangePasswordSerializer,
+    responses={200: OpenApiResponse(description="Password changed")},
+)
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    serializer = ChangePasswordSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    current_password = serializer.validated_data["current_password"]
+    new_password = serializer.validated_data["new_password"]
+
+    # Verify current password
+    if not verify_password(current_password, request.user.password_hash):
+        return Response({"detail": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if len(new_password) < 8:
+        return Response({"detail": "Password must be at least 8 characters."}, status=status.HTTP_400_BAD_REQUEST)
+
+    request.user.password_hash = hash_password(new_password)
+    request.user.tokens_invalidated_at = timezone.now()
+    request.user.save(update_fields=["password_hash", "tokens_invalidated_at", "updated_at"])
+
+    return Response(status=status.HTTP_200_OK)
 
 
 @extend_schema(
@@ -695,13 +1241,32 @@ def checkout(request):
     updates = payload.validated_data
 
     # Totals must be server-derived. Ignore client-supplied shipping/tax/discount to
-    # avoid undercharge/fraud. In this stub we keep them zeroed/unchanged.
-    shipping = Decimal("0")
-    tax = Decimal("0")
-    discount = Decimal("0")
+    # avoid undercharge/fraud.
+    def _dec_from_setting(name: str, default: str = "0") -> Decimal:
+        raw = getattr(settings, name, default)
+        try:
+            return Decimal(str(raw))
+        except Exception:
+            return Decimal(default)
+
+    def _calc_shipping(subtotal_amount: Decimal) -> Decimal:
+        flat = _dec_from_setting("ORDER_SHIPPING_FLAT", "0")
+        return flat if subtotal_amount > 0 else Decimal("0")
+
+    def _calc_tax(subtotal_amount: Decimal) -> Decimal:
+        rate = _dec_from_setting("ORDER_TAX_RATE", "0")
+        return (subtotal_amount * rate).quantize(Decimal("0.01"))
+
+    def _calc_discount(subtotal_amount: Decimal) -> Decimal:
+        rate = _dec_from_setting("ORDER_DISCOUNT_RATE", "0")
+        return (subtotal_amount * rate).quantize(Decimal("0.01"))
+
+    shipping = _calc_shipping(order.subtotal)
+    tax = _calc_tax(order.subtotal)
+    discount = _calc_discount(order.subtotal)
 
     subtotal = order.subtotal
-    total_base = subtotal + shipping + tax
+    total_base = subtotal + shipping + tax - discount
 
     order.shipping = shipping
     order.tax = tax
@@ -742,7 +1307,6 @@ def checkout(request):
         "contact_phone",
         "updated_at",
     ])
-
     serializer = OrderSerializer(order, context={"request": request})
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -858,14 +1422,22 @@ def report_aggregate(request):
     paid = models.Order.objects.filter(status=OrderStatus.PAID)
     revenue = paid.aggregate(total=Sum("total"))["total"] or Decimal("0")
 
+    refunds = models.RefundRequest.objects.count()
+    at_risk_products = models.Product.objects.filter(stock_qty__lte=1).count()
+    month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    mtd_orders = models.Order.objects.filter(created_at__gte=month_start).count()
+
     return Response(
         {
             "users": models.User.objects.count(),
             "products": models.Product.objects.count(),
             "orders": models.Order.objects.count(),
             "paid_orders": paid.count(),
-            "revenue": str(revenue),
+            "revenue": f"{revenue:.2f}",
             "currency": "USD",
+            "refunds": refunds,
+            "inventory_risk": at_risk_products,
+            "mtd_orders": mtd_orders,
         }
     )
 
@@ -906,11 +1478,11 @@ class CartItemViewSet(viewsets.ModelViewSet):
         return Response(
             {
                 "currency": "USD",
-                "subtotal": str(subtotal),
+                "subtotal": f"{subtotal:.2f}",
                 "shipping": "0",
                 "tax": "0",
                 "discount": "0",
-                "total": str(subtotal),
+                "total": f"{subtotal:.2f}",
                 "items": CartItemSerializer(items, many=True, context={"request": request}).data,
             }
         )
@@ -939,9 +1511,10 @@ class WishlistViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         try:
-            serializer.save(user=self.request.user)
+            obj = serializer.save(user=self.request.user)
         except IntegrityError:
             raise ValidationError({"product_id": "Product is already in wishlist."})
+        return obj
 
 
 @extend_schema_view(
@@ -958,9 +1531,10 @@ class SavedItemViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         try:
-            serializer.save(user=self.request.user)
+            obj = serializer.save(user=self.request.user)
         except IntegrityError:
             raise ValidationError({"product_id": "Product is already saved."})
+        return obj
 
 
 @extend_schema_view(
@@ -1038,15 +1612,15 @@ def password_reset_request(request):
         models.PasswordResetToken.objects.filter(expires_at__lte=now).delete()
 
         # Enforce per-user cap on active tokens.
-        max_tokens = int(getattr(settings, "PASSWORD_RESET_MAX_ACTIVE_TOKENS_PER_USER", 3))
-        if max_tokens >= 0:
-            excess_ids = list(
-                models.PasswordResetToken.objects.filter(
-                    user=user, used_at__isnull=True, expires_at__gt=now
-                )
-                .order_by("-created_at")
-                .values_list("pk", flat=True)[max_tokens:]
-            )
+        max_tokens = int(getattr(settings, "PASSWORD_RESET_MAX_ACTIVE_TOKENS_PER_USER", 1))
+        # If we are going to create a new token, keep at most (max_tokens - 1)
+        # existing tokens so the total stays within limit.
+        keep_existing = max(0, max_tokens - 1) if max_tokens >= 0 else None
+        active_qs = models.PasswordResetToken.objects.filter(
+            user=user, used_at__isnull=True, expires_at__gt=now
+        ).order_by("-created_at")
+        if keep_existing is not None:
+            excess_ids = list(active_qs.values_list("pk", flat=True)[keep_existing:])
             if excess_ids:
                 models.PasswordResetToken.objects.filter(pk__in=excess_ids).delete()
 
@@ -1082,13 +1656,91 @@ def password_reset_confirm(request):
             return Response({"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
 
         user = prt.user
-        from backend_app.security import hash_password
 
         user.password_hash = hash_password(password)
         user.tokens_invalidated_at = timezone.now()
         user.save(update_fields=["password_hash", "tokens_invalidated_at", "updated_at"])
         prt.used_at = timezone.now()
         prt.save(update_fields=["used_at"])
+
+        # Invalidate any other active reset tokens for this user
+        models.PasswordResetToken.objects.filter(
+            user=user,
+            used_at__isnull=True,
+        ).exclude(pk=prt.pk).update(used_at=timezone.now())
+
+    return Response(status=status.HTTP_200_OK)
+
+
+@extend_schema(
+    tags=["auth"],
+    summary="Request email verification",
+    request=EmailVerificationRequestSerializer,
+    responses={204: OpenApiResponse(description="Verification email sent")},
+)
+@api_view(["POST"])
+@permission_classes([])
+@throttle_classes([ScopedRateThrottle])
+def email_verification_request(request):
+    setattr(email_verification_request, "throttle_scope", "email_verification")
+    serializer = EmailVerificationRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    email = serializer.validated_data["email"]
+    user = models.User.objects.filter(email=email).first()
+    if user and not user.is_email_verified:
+        now = timezone.now()
+
+        # Cleanup expired tokens globally to avoid unbounded growth.
+        models.EmailVerificationToken.objects.filter(expires_at__lte=now).delete()
+
+        # Enforce per-user cap on active tokens.
+        max_tokens = int(getattr(settings, "EMAIL_VERIFICATION_MAX_ACTIVE_TOKENS_PER_USER", 1))
+        active_qs = models.EmailVerificationToken.objects.filter(
+            user=user, used_at__isnull=True, expires_at__gt=now
+        ).order_by("-created_at")
+        if max_tokens >= 0:
+            excess_ids = list(active_qs.values_list("pk", flat=True)[max_tokens:])
+            if excess_ids:
+                models.EmailVerificationToken.objects.filter(pk__in=excess_ids).delete()
+
+        token = uuid4().hex
+        expiry = now + timedelta(hours=24)
+        models.EmailVerificationToken.objects.create(user=user, token=token, expires_at=expiry)
+        # NOTE: In a real system we'd send email here.
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    tags=["auth"],
+    summary="Confirm email verification",
+    request=EmailVerificationConfirmSerializer,
+    responses={200: OpenApiResponse(description="Email verified")},
+)
+@api_view(["POST"])
+@permission_classes([])
+@throttle_classes([ScopedRateThrottle])
+def email_verification_confirm(request):
+    setattr(email_verification_confirm, "throttle_scope", "email_verification")
+    serializer = EmailVerificationConfirmSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    token = serializer.validated_data["token"]
+    with transaction.atomic():
+        evt = (
+            models.EmailVerificationToken.objects.select_for_update()
+            .filter(token=token, used_at__isnull=True, expires_at__gt=timezone.now())
+            .first()
+        )
+        if not evt:
+            return Response({"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = evt.user
+        if not user.is_email_verified:
+            user.is_email_verified = True
+            user.email_verified_at = timezone.now()
+            user.save(update_fields=["is_email_verified", "email_verified_at", "updated_at"])
+
+        evt.used_at = timezone.now()
+        evt.save(update_fields=["used_at"])
 
     return Response(status=status.HTTP_200_OK)
 

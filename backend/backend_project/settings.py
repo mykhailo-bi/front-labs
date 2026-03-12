@@ -54,10 +54,28 @@ elif DEBUG:
 else:
     ALLOWED_HOSTS = []
 
+# Django admin (enabled; restricted via custom AdminSite has_permission in backend_app.admin)
+CSRF_TRUSTED_ORIGINS = [
+    *[f"http://{h}" for h in ALLOWED_HOSTS],
+    *[f"https://{h}" for h in ALLOWED_HOSTS],
+]
+
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+SESSION_COOKIE_SECURE = str(os.getenv("SESSION_COOKIE_SECURE", "")).lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+if not os.getenv("SESSION_COOKIE_SECURE"):
+    SESSION_COOKIE_SECURE = not DEBUG
 
 # Application definition
 
 INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.sessions',
+    'django.contrib.messages',
     'django.contrib.contenttypes',
     # Required by SimpleJWT dependency (imports django.contrib.auth models).
     # NOTE: We are NOT using Django's built-in auth.User as our application user.
@@ -71,8 +89,11 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'backend_app.middleware.RequestIdMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
 ROOT_URLCONF = 'backend_project.urls'
@@ -88,6 +109,8 @@ TEMPLATES = [
             'context_processors': [
                 # Keep minimal, but include request to support template rendering needs.
                 'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
             ],
         },
     }
@@ -127,6 +150,8 @@ REST_FRAMEWORK = {
         'user': os.getenv('API_THROTTLE_USER', '600/min'),
         # Dedicated scope for password reset endpoints to mitigate abuse.
         'password_reset': os.getenv('API_THROTTLE_PASSWORD_RESET', '10/hour'),
+        # Email verification throttling.
+        'email_verification': os.getenv('API_THROTTLE_EMAIL_VERIFICATION', '10/hour'),
     },
     # Avoid importing/using Django's auth AnonymousUser.
     'UNAUTHENTICATED_USER': None,
@@ -189,6 +214,14 @@ JWT_REFRESH_TTL_SECONDS = int(os.getenv('JWT_REFRESH_TTL_SECONDS', '1209600'))  
 
 # Order reservation TTL (how long stock stays reserved after checkout before release job cancels it).
 ORDER_RESERVATION_TTL_SECONDS = int(os.getenv('ORDER_RESERVATION_TTL_SECONDS', str(30 * 60)))
+
+# Totals calculation (placeholders for now; server-derived)
+ORDER_CURRENCY = os.getenv("ORDER_CURRENCY", "USD")
+ORDER_BASE_CURRENCY = os.getenv("ORDER_BASE_CURRENCY", "USD")
+ORDER_FX_RATE = os.getenv("ORDER_FX_RATE", "1")
+ORDER_SHIPPING_FLAT = os.getenv("ORDER_SHIPPING_FLAT", "0")
+ORDER_TAX_RATE = os.getenv("ORDER_TAX_RATE", "0")
+ORDER_DISCOUNT_RATE = os.getenv("ORDER_DISCOUNT_RATE", "0")
 
 
 # SimpleJWT settings (token issuance/verification)

@@ -21,6 +21,8 @@ dependencies = [
 dev = [
   "ruff>=0.3",
   "black>=24.0",
+  "pytest>=8.3",
+  "pytest-django>=4.8",
 ]
 
 [tool.setuptools]
@@ -37,3 +39,8 @@ target-version = "py310"
 
 [tool.black]
 line-length = 100
+
+[tool.pytest.ini_options]
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+python_classes = ["Test*", "*Tests"]
+python_functions = ["test_*", "*_test"]

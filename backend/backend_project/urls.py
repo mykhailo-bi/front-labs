@@ -15,6 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import include, path
+from django.contrib import admin
+from backend_app.admin import admin_site
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -36,6 +38,8 @@ urlpatterns = [
     path('readyz', readyz),
     # Versioned API (primary)
     path('api/v1/', include('backend_app.urls')),
+    # Django admin — restricted to is_admin users via custom admin site.
+    path('admin/', admin_site.urls),
 ]
 
 # Serve uploaded media in development only.

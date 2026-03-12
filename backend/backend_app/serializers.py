@@ -27,11 +27,20 @@ class UserSerializer(serializers.ModelSerializer):
             "description",
             "phone",
             "is_admin",
+            "role",
+            "status",
+            "is_email_verified",
+            "email_verified_at",
             "avatar_id",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "is_admin", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "is_admin",
+            "created_at",
+            "updated_at",
+        ]
 
     def create(self, validated_data):
         password = validated_data.pop("password", None)
@@ -88,6 +97,16 @@ class UserSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class MeSerializer(UserSerializer):
+    class Meta(UserSerializer.Meta):
+        read_only_fields = UserSerializer.Meta.read_only_fields + [
+            "role",
+            "status",
+            "is_email_verified",
+            "email_verified_at",
+        ]
+
+
 class RegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=32)
     email = serializers.EmailField(max_length=64)
@@ -111,8 +130,17 @@ class RegisterSerializer(serializers.Serializer):
             **validated_data,
             is_admin=False,
             password_hash=hash_password(password),
+            is_email_verified=False,
         )
         return user
+
+
+class EmailVerificationRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class EmailVerificationConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField()
 
 
 class LoginSerializer(serializers.Serializer):
@@ -195,6 +223,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "user_id",
             "status",
             "currency",
+            "base_currency",
+            "fx_rate",
             "subtotal",
             "shipping",
             "tax",
@@ -213,6 +243,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "delivery_method",
             "payment_method",
             "contact_phone",
+            "tracking_number",
+            "tracking_url",
             "shipping_address",
             "placed_at",
             "paid_at",
@@ -226,6 +258,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "id",
             "status",
             "currency",
+            "base_currency",
+            "fx_rate",
             "subtotal",
             "shipping",
             "tax",
@@ -373,35 +407,89 @@ class AddressSerializer(serializers.ModelSerializer):
 
 
 class WishlistItemSerializer(serializers.ModelSerializer):
-    user_id = serializers.PrimaryKeyRelatedField(source="user", queryset=models.User.objects.all(), required=False)
+    user_id = serializers.PrimaryKeyRelatedField(
+        source="user",
+        queryset=models.User.objects.all(),
+        required=False,
+        default=serializers.CurrentUserDefault(),
+    )
     product_id = serializers.PrimaryKeyRelatedField(source="product", queryset=models.Product.objects.all())
 
     class Meta:
         model = models.WishlistItem
         fields = ["id", "user_id", "product_id", "created_at"]
         read_only_fields = ["id", "created_at"]
+        validators = []  # handle uniqueness manually to attach errors to product_id
 
     def validate(self, attrs):
         request = self.context.get("request")
+        user = attrs.get("user")
         if request and not getattr(request.user, "is_admin", False):
-            attrs["user"] = request.user
+            user = request.user
+            attrs["user"] = user
+        product = attrs.get("product")
+        if user and product and models.WishlistItem.objects.filter(user=user, product=product).exists():
+            raise serializers.ValidationError({"product_id": "Product is already in wishlist."})
         return attrs
+
+    def create(self, validated_data):
+        # Ensure user is present even if not provided explicitly
+        if "user" not in validated_data:
+            request = self.context.get("request")
+            if request and getattr(request, "user", None):
+                validated_data["user"] = request.user
+
+        # Pre-check uniqueness to surface field-specific error instead of non_field_errors
+        user = validated_data.get("user")
+        product = validated_data.get("product")
+        if user and product and models.WishlistItem.objects.filter(user=user, product=product).exists():
+            raise serializers.ValidationError({"product_id": "Product is already in wishlist."})
+        try:
+            return super().create(validated_data)
+        except IntegrityError as exc:
+            raise serializers.ValidationError({"product_id": "Product is already in wishlist."}) from exc
 
 
 class SavedItemSerializer(serializers.ModelSerializer):
-    user_id = serializers.PrimaryKeyRelatedField(source="user", queryset=models.User.objects.all(), required=False)
+    user_id = serializers.PrimaryKeyRelatedField(
+        source="user",
+        queryset=models.User.objects.all(),
+        required=False,
+        default=serializers.CurrentUserDefault(),
+    )
     product_id = serializers.PrimaryKeyRelatedField(source="product", queryset=models.Product.objects.all())
 
     class Meta:
         model = models.SavedItem
         fields = ["id", "user_id", "product_id", "created_at"]
         read_only_fields = ["id", "created_at"]
+        validators = []
 
     def validate(self, attrs):
         request = self.context.get("request")
+        user = attrs.get("user")
         if request and not getattr(request.user, "is_admin", False):
-            attrs["user"] = request.user
+            user = request.user
+            attrs["user"] = user
+        product = attrs.get("product")
+        if user and product and models.SavedItem.objects.filter(user=user, product=product).exists():
+            raise serializers.ValidationError({"product_id": "Product is already saved."})
         return attrs
+
+    def create(self, validated_data):
+        if "user" not in validated_data:
+            request = self.context.get("request")
+            if request and getattr(request, "user", None):
+                validated_data["user"] = request.user
+
+        user = validated_data.get("user")
+        product = validated_data.get("product")
+        if user and product and models.SavedItem.objects.filter(user=user, product=product).exists():
+            raise serializers.ValidationError({"product_id": "Product is already saved."})
+        try:
+            return super().create(validated_data)
+        except IntegrityError as exc:
+            raise serializers.ValidationError({"product_id": "Product is already saved."}) from exc
 
 
 class ImageSerializer(serializers.ModelSerializer):
@@ -506,10 +594,51 @@ class SetProductImagesSerializer(serializers.Serializer):
     )
 
 
+class ProductImageAltTextSerializer(serializers.Serializer):
+    image_id = serializers.IntegerField(min_value=1)
+    alt_text = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
 class MarkPaidRequestSerializer(serializers.Serializer):
     order_id = serializers.IntegerField(min_value=1)
     reference_id = serializers.CharField(required=False, allow_blank=True)
     idempotency_key = serializers.CharField(required=False, allow_blank=True)
+
+
+class RefundRequestSerializer(serializers.ModelSerializer):
+    order_id = serializers.PrimaryKeyRelatedField(
+        source="order",
+        queryset=models.Order.objects.all(),
+        required=False,
+    )
+    user_id = serializers.PrimaryKeyRelatedField(source="user", read_only=True)
+
+    class Meta:
+        model = models.RefundRequest
+        fields = ["id", "order_id", "user_id", "reason", "status", "created_at", "updated_at"]
+        read_only_fields = ["id", "status", "created_at", "updated_at", "user_id"]
+
+
+class OrderEventSerializer(serializers.ModelSerializer):
+    order_id = serializers.PrimaryKeyRelatedField(source="order", queryset=models.Order.objects.all())
+
+    class Meta:
+        model = models.OrderEvent
+        fields = ["id", "order_id", "event_type", "note", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
+
+class CustomerMarkPaidSerializer(serializers.Serializer):
+    order_id = serializers.IntegerField(min_value=1)
+    reference_id = serializers.CharField(required=False, allow_blank=True)
+    idempotency_key = serializers.CharField(required=False, allow_blank=True)
+
+
+class UserInviteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.UserInvite
+        fields = ["id", "email", "role", "token", "expires_at", "accepted_at", "created_at"]
+        read_only_fields = ["id", "token", "accepted_at", "created_at"]
 
 
 class MarkPaidResponseSerializer(serializers.Serializer):
@@ -574,3 +703,8 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
     password = serializers.CharField(min_length=8)
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField()
+    new_password = serializers.CharField(min_length=8)

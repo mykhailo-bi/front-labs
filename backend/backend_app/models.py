@@ -61,6 +61,8 @@ class Order(models.Model):
     reservation_expires_at = models.DateTimeField(blank=True, null=True)
 
     currency = models.CharField(max_length=3, default="USD")
+    base_currency = models.CharField(max_length=3, default="USD")
+    fx_rate = models.DecimalField(max_digits=10, decimal_places=6, default=1)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     shipping = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     tax = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -79,6 +81,9 @@ class Order(models.Model):
     delivery_method = models.CharField(max_length=32, blank=True, null=True)
     payment_method = models.CharField(max_length=32, blank=True, null=True)
     contact_phone = models.CharField(max_length=32, blank=True, null=True)
+
+    tracking_number = models.CharField(max_length=64, blank=True, null=True)
+    tracking_url = models.CharField(max_length=255, blank=True, null=True)
 
     idempotency_key = models.CharField(max_length=64, blank=True, null=True)
 
@@ -217,9 +222,29 @@ class User(models.Model):
     description = models.TextField(blank=True, null=True)
     phone = models.CharField(unique=True, max_length=16, blank=True, null=True)
     is_admin = models.BooleanField(default=False)
+    role = models.CharField(
+        max_length=16,
+        default="customer",
+        choices=(
+            ("customer", "Customer"),
+            ("manager", "Manager"),
+            ("admin", "Admin"),
+        ),
+    )
+    status = models.CharField(
+        max_length=16,
+        default="active",
+        choices=(
+            ("active", "Active"),
+            ("suspended", "Suspended"),
+            ("invited", "Invited"),
+        ),
+    )
     tokens_invalidated_at = models.DateTimeField(
         default=datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
     )
+    is_email_verified = models.BooleanField(default=False)
+    email_verified_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     avatar = models.ForeignKey(Image, models.SET_NULL, blank=True, null=True)
@@ -240,7 +265,22 @@ class User(models.Model):
     def is_anonymous(self) -> bool:
         return False
 
+    # Django admin/session compatibility helpers
+    @property
+    def is_staff(self) -> bool:
+        return bool(self.is_admin)
 
+    @property
+    def is_superuser(self) -> bool:
+        return bool(self.is_admin)
+
+    @property
+    def is_active(self) -> bool:
+        return True
+
+    def get_session_auth_hash(self):
+        # Use password_hash as session hash source; rotate when password changes.
+        return self.password_hash
 class Address(models.Model):
     user = models.ForeignKey(User, models.CASCADE)
     label = models.CharField(max_length=64, blank=True, null=True)
@@ -302,6 +342,30 @@ class PaymentAttempt(models.Model):
         ]
 
 
+class RefundRequest(models.Model):
+    order = models.ForeignKey(Order, models.PROTECT)
+    user = models.ForeignKey(User, models.PROTECT)
+    reason = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=16, default="requested")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "refund_request"
+        indexes = [models.Index(fields=["order"], name="refund_request_order_idx")]
+
+
+class OrderEvent(models.Model):
+    order = models.ForeignKey(Order, models.CASCADE)
+    event_type = models.CharField(max_length=32)
+    note = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "order_event"
+        indexes = [models.Index(fields=["order", "created_at"], name="order_event_order_created_idx")]
+
+
 class BlacklistedToken(models.Model):
     user = models.ForeignKey(User, models.CASCADE, blank=True, null=True)
     jti = models.CharField(max_length=255, unique=True)
@@ -324,3 +388,28 @@ class PasswordResetToken(models.Model):
     class Meta:
         db_table = "password_reset_token"
         indexes = [models.Index(fields=["expires_at"], name="password_reset_exp_idx")]
+
+
+class EmailVerificationToken(models.Model):
+    user = models.ForeignKey(User, models.CASCADE)
+    token = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "email_verification_token"
+        indexes = [models.Index(fields=["expires_at"], name="email_verification_exp_idx")]
+
+
+class UserInvite(models.Model):
+    email = models.CharField(max_length=64, unique=True)
+    role = models.CharField(max_length=16, default="customer")
+    token = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "user_invite"
+        indexes = [models.Index(fields=["expires_at"], name="user_invite_exp_idx")]
