@@ -91,3 +91,11 @@ class SimpleJWTAuthenticationTests:
         self.user.save(update_fields=["tokens_invalidated_at"])
         with pytest.raises(drf_exc.AuthenticationFailed):
             self.auth.get_user(token)
+
+    def test_get_user_rejects_suspended_status(self):
+        pair = issue_token_pair(user=self.user)
+        token = RefreshToken(pair.refresh).access_token
+        self.user.status = "suspended"
+        self.user.save(update_fields=["status", "updated_at"])
+        with pytest.raises(drf_exc.AuthenticationFailed):
+            self.auth.get_user(token)

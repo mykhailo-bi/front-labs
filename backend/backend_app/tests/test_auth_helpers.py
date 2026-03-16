@@ -71,3 +71,10 @@ class AuthHelperTests:
         with mock.patch("backend_app.auth.models.User.objects.get", side_effect=models.User.DoesNotExist):
             with pytest.raises(drf_exc.AuthenticationFailed):
                 auth_module.refresh_access_token(refresh_token=pair.refresh)
+
+    def test_refresh_access_token_rejects_suspended_user(self):
+        pair = issue_token_pair(user=self.user)
+        self.user.status = "suspended"
+        self.user.save(update_fields=["status", "updated_at"])
+        with pytest.raises(drf_exc.AuthenticationFailed):
+            auth_module.refresh_access_token(refresh_token=pair.refresh)

@@ -162,6 +162,9 @@ class LoginSerializer(serializers.Serializer):
         if not verify_password(password, user.password_hash):
             raise serializers.ValidationError("Invalid credentials")
 
+        if getattr(user, "status", "active") != "active":
+            raise serializers.ValidationError("Account is not active")
+
         attrs["user"] = user
         return attrs
 

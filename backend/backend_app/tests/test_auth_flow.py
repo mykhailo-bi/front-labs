@@ -57,6 +57,17 @@ class AuthFlowTests:
         rt = RefreshToken(refresh)
         assert models.BlacklistedToken.objects.filter(jti=rt["jti"]).exists()
 
+    def test_login_rejects_suspended_user(self):
+        self.user.status = "suspended"
+        self.user.save(update_fields=["status", "updated_at"])
+        res = self.client.post(
+            "/api/v1/auth/login/",
+            {"username_or_email": self.user.username, "password": "secret1234"},
+            format="json",
+        )
+        assert res.status_code == 400
+        assert "Account is not active" in str(res.data)
+
     def test_register_and_login_errors(self):
         res = self.client.post(
             "/api/v1/auth/register/",
