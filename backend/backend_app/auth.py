@@ -134,13 +134,13 @@ class SimpleJWTAuthentication(authentication.BaseAuthentication):
         except (TypeError, ValueError) as exc:
             raise AuthenticationFailed("Invalid token user identification") from exc
 
-    try:
-        user = models.User.objects.get(**{api_settings.USER_ID_FIELD: user_id_int})
-    except models.User.DoesNotExist as exc:
-        raise AuthenticationFailed("User not found") from exc
+        try:
+            user = models.User.objects.get(**{api_settings.USER_ID_FIELD: user_id_int})
+        except models.User.DoesNotExist as exc:
+            raise AuthenticationFailed("User not found") from exc
 
-    if getattr(user, "status", "active") != "active":
-        raise AuthenticationFailed("Account is not active")
+        if getattr(user, "status", "active") != "active":
+            raise AuthenticationFailed("Account is not active")
 
         issued_at = validated_token.get("iat")
         if issued_at is None:
