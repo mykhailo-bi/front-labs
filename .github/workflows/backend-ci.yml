@@ -55,4 +55,4 @@ jobs:
         working-directory: backend
         run: |
           uv run python manage.py migrate
-          uv run python manage.py test
+          uv run pytest
