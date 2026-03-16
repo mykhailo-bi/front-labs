@@ -1,13 +1,13 @@
 import pytest
 from decimal import Decimal
 from unittest import mock
-from rest_framework.test import APIRequestFactory
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.utils import IntegrityError
 from backend_app import models
 from backend_app.security import hash_password, verify_password
 
 pytestmark = pytest.mark.django_db
+
 
 class SerializerValidationTests:
     @pytest.fixture(autouse=True)
@@ -50,7 +50,9 @@ class SerializerValidationTests:
             ser.save()
 
         # Short password: validation passes, save raises
-        ser2 = UserSerializer(data={"username": "u4", "email": "e4@example.com", "password": "short"})
+        ser2 = UserSerializer(
+            data={"username": "u4", "email": "e4@example.com", "password": "short"}
+        )
         ser2.is_valid(raise_exception=True)
         with pytest.raises(Exception):
             ser2.save()
@@ -81,7 +83,12 @@ class SerializerValidationTests:
     def test_user_serializer_update_unique_conflicts(self):
         from backend_app.serializers import UserSerializer
 
-        ser = UserSerializer(instance=self.user, data={"username": self.user2.username}, partial=True, context=self._ctx(self.user))
+        ser = UserSerializer(
+            instance=self.user,
+            data={"username": self.user2.username},
+            partial=True,
+            context=self._ctx(self.user),
+        )
         assert not ser.is_valid()
         assert "username" in ser.errors
 
@@ -121,16 +128,22 @@ class SerializerValidationTests:
     def test_login_serializer_username_or_email_paths(self):
         from backend_app.serializers import LoginSerializer
 
-        ser = LoginSerializer(data={"username_or_email": self.user.username, "password": "secret1234"})
+        ser = LoginSerializer(
+            data={"username_or_email": self.user.username, "password": "secret1234"}
+        )
         assert ser.is_valid(), ser.errors
 
-        ser_email = LoginSerializer(data={"username_or_email": self.user.email, "password": "secret1234"})
+        ser_email = LoginSerializer(
+            data={"username_or_email": self.user.email, "password": "secret1234"}
+        )
         assert ser_email.is_valid(), ser_email.errors
 
         ser_bad = LoginSerializer(data={"username_or_email": "missing", "password": "secret1234"})
         assert not ser_bad.is_valid()
 
-        ser_bad_pw = LoginSerializer(data={"username_or_email": self.user.username, "password": "wrong"})
+        ser_bad_pw = LoginSerializer(
+            data={"username_or_email": self.user.username, "password": "wrong"}
+        )
         assert not ser_bad_pw.is_valid()
 
     def test_cart_item_serializer_validation_paths(self):
@@ -169,11 +182,17 @@ class SerializerValidationTests:
     def test_review_serializer_rating_and_eligibility(self):
         from backend_app.serializers import ReviewSerializer
 
-        ser = ReviewSerializer(data={"product_id": self.product.id, "rating": 0, "text": "bad"}, context=self._ctx(self.user))
+        ser = ReviewSerializer(
+            data={"product_id": self.product.id, "rating": 0, "text": "bad"},
+            context=self._ctx(self.user),
+        )
         assert not ser.is_valid()
         assert "rating" in ser.errors
 
-        ser2 = ReviewSerializer(data={"product_id": self.product.id, "rating": 5, "text": "ok"}, context=self._ctx(self.user))
+        ser2 = ReviewSerializer(
+            data={"product_id": self.product.id, "rating": 5, "text": "ok"},
+            context=self._ctx(self.user),
+        )
         assert not ser2.is_valid()
         assert "product_id" in ser2.errors
 
@@ -367,7 +386,9 @@ class SerializerValidationTests:
             password_hash=hash_password("secret1234"),
             is_admin=False,
         )
-        with mock.patch("backend_app.serializers.models.WishlistItem.objects.create", side_effect=IntegrityError):
+        with mock.patch(
+            "backend_app.serializers.models.WishlistItem.objects.create", side_effect=IntegrityError
+        ):
             wish_err = WishlistItemSerializer(
                 data={"product_id": self.product.id, "user_id": other.id},
                 context=self._ctx(other),
@@ -391,7 +412,9 @@ class SerializerValidationTests:
         assert not saved_dup.is_valid()
         assert "product_id" in saved_dup.errors
 
-        with mock.patch("backend_app.serializers.models.SavedItem.objects.create", side_effect=IntegrityError):
+        with mock.patch(
+            "backend_app.serializers.models.SavedItem.objects.create", side_effect=IntegrityError
+        ):
             saved_err = SavedItemSerializer(
                 data={"product_id": self.product.id, "user_id": other.id},
                 context=self._ctx(other),
@@ -425,12 +448,15 @@ class SerializerValidationTests:
         self.product.save(update_fields=["stock_qty"])
         cart = models.Cart.objects.create(user=self.user, product=self.product, count=1)
 
-        with mock.patch(
-            "backend_app.serializers.models.Cart.objects.get_or_create",
-            side_effect=IntegrityError,
-        ), mock.patch(
-            "backend_app.serializers.models.Cart.objects.select_for_update"
-        ) as select_for_update:
+        with (
+            mock.patch(
+                "backend_app.serializers.models.Cart.objects.get_or_create",
+                side_effect=IntegrityError,
+            ),
+            mock.patch(
+                "backend_app.serializers.models.Cart.objects.select_for_update"
+            ) as select_for_update,
+        ):
             select_for_update.return_value.get.return_value = cart
 
             ser_create = CartItemSerializer(
@@ -453,6 +479,8 @@ class SerializerValidationTests:
             reserved_qty=0,
             is_published=True,
         )
-        ser = ReviewSerializer(data={"product_id": product.id, "rating": 6, "text": "x"}, context=self._ctx(self.user))
+        ser = ReviewSerializer(
+            data={"product_id": product.id, "rating": 6, "text": "x"}, context=self._ctx(self.user)
+        )
         assert not ser.is_valid()
         assert "rating" in ser.errors

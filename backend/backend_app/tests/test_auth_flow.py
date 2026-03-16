@@ -9,6 +9,7 @@ from backend_app.security import hash_password
 
 pytestmark = pytest.mark.django_db
 
+
 class AuthFlowTests:
     @pytest.fixture(autouse=True)
     def _setup(self):

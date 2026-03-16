@@ -11,6 +11,7 @@ from backend_app.security import hash_password
 
 pytestmark = pytest.mark.django_db
 
+
 class SimpleJWTAuthenticationTests:
     @pytest.fixture(autouse=True)
     def _setup(self):
@@ -76,7 +77,9 @@ class SimpleJWTAuthenticationTests:
             with pytest.raises(drf_exc.AuthenticationFailed):
                 self.auth.get_user(token)
 
-        with mock.patch("backend_app.auth.models.User.objects.get", side_effect=models.User.DoesNotExist):
+        with mock.patch(
+            "backend_app.auth.models.User.objects.get", side_effect=models.User.DoesNotExist
+        ):
             with pytest.raises(drf_exc.AuthenticationFailed):
                 self.auth.get_user(token)
 

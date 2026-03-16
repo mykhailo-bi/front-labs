@@ -107,7 +107,7 @@ def main() -> None:
 
         # Admin
         admin_avatar = images.pop() if images else None
-        admin = models.User.objects.create(
+        models.User.objects.create(
             username=admin_username,
             email=args.admin_email,
             password_hash=hash_password(args.admin_password),
@@ -199,4 +199,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -55,8 +55,7 @@ class Command(BaseCommand):
                 # reserved_qty must be >= 0, clamp at 0 to keep the command operational.
                 product_ids = [row["product_id"] for row in lines]
                 products_by_id = {
-                    p.id: p
-                    for p in Product.objects.select_for_update().filter(id__in=product_ids)
+                    p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)
                 }
 
                 for line in lines:

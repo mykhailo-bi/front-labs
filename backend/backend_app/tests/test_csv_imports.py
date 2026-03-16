@@ -9,6 +9,7 @@ from backend_app.security import hash_password
 
 pytestmark = pytest.mark.django_db
 
+
 class CsvImportLimitTests:
     @pytest.fixture(autouse=True)
     def _setup(self):
@@ -28,15 +29,21 @@ class CsvImportLimitTests:
     def test_user_import_rejects_large_file(self):
         content = "email\n" + ("a" * 20)
         upload = SimpleUploadedFile("users.csv", content.encode("utf-8"), content_type="text/csv")
-        res = self.client.post("/api/v1/users/import/", {"file": upload}, format="multipart", **self._auth())
+        res = self.client.post(
+            "/api/v1/users/import/", {"file": upload}, format="multipart", **self._auth()
+        )
         assert res.status_code == 400
         assert "detail" in res.data
 
     @override_settings(CSV_IMPORT_MAX_ROWS=1)
     def test_product_import_rejects_row_limit(self):
         content = "name\nprod1\nprod2\n"
-        upload = SimpleUploadedFile("products.csv", content.encode("utf-8"), content_type="text/csv")
-        res = self.client.post("/api/v1/products/import/", {"file": upload}, format="multipart", **self._auth())
+        upload = SimpleUploadedFile(
+            "products.csv", content.encode("utf-8"), content_type="text/csv"
+        )
+        res = self.client.post(
+            "/api/v1/products/import/", {"file": upload}, format="multipart", **self._auth()
+        )
         assert res.status_code == 400
         assert "detail" in res.data
 
@@ -48,7 +55,9 @@ class CsvImportLimitTests:
     def test_user_import_success_with_defaults_and_integrity_errors(self):
         content = "email,username,password,is_admin,is_email_verified\nuser1@example.com,u1,,1,0\nuser1@example.com,u1,,0,0\n"
         upload = SimpleUploadedFile("users.csv", content.encode("utf-8"), content_type="text/csv")
-        res = self.client.post("/api/v1/users/import/", {"file": upload}, format="multipart", **self._auth())
+        res = self.client.post(
+            "/api/v1/users/import/", {"file": upload}, format="multipart", **self._auth()
+        )
         # First row creates, second triggers integrity error path; API still 200 with counts.
         assert res.status_code == 200
         assert res.data["created"] == 1
@@ -60,17 +69,27 @@ class CsvImportLimitTests:
         assert "file" in res.data
 
     def test_product_import_success_creates_and_updates(self):
-        content = "sku,name,price,stock_qty,is_published\nSKU1,Prod1,10.00,5,1\nSKU1,Prod1b,11.00,6,1\n"
-        upload = SimpleUploadedFile("products.csv", content.encode("utf-8"), content_type="text/csv")
-        res = self.client.post("/api/v1/products/import/", {"file": upload}, format="multipart", **self._auth())
+        content = (
+            "sku,name,price,stock_qty,is_published\nSKU1,Prod1,10.00,5,1\nSKU1,Prod1b,11.00,6,1\n"
+        )
+        upload = SimpleUploadedFile(
+            "products.csv", content.encode("utf-8"), content_type="text/csv"
+        )
+        res = self.client.post(
+            "/api/v1/products/import/", {"file": upload}, format="multipart", **self._auth()
+        )
         assert res.status_code == 200
         assert res.data["created"] == 1
         assert res.data["updated"] == 1
 
     def test_product_import_handles_blank_sku(self):
         content = "sku,name,price,stock_qty,is_published\n,ProdNoSku,5.00,1,1\n"
-        upload = SimpleUploadedFile("products.csv", content.encode("utf-8"), content_type="text/csv")
-        res = self.client.post("/api/v1/products/import/", {"file": upload}, format="multipart", **self._auth())
+        upload = SimpleUploadedFile(
+            "products.csv", content.encode("utf-8"), content_type="text/csv"
+        )
+        res = self.client.post(
+            "/api/v1/products/import/", {"file": upload}, format="multipart", **self._auth()
+        )
         assert res.status_code == 200
         assert res.data["created"] == 1
 

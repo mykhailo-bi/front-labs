@@ -14,8 +14,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.urls import include, path
-from django.contrib import admin
 from backend_app.admin import admin_site
 from django.conf import settings
 from django.conf.urls.static import static
@@ -33,13 +33,14 @@ def _docs_enabled() -> bool:
         str(getattr(settings, "SPECTACULAR_ENABLE_DOCS", "")).lower() in {"1", "true", "yes", "on"}
     )
 
+
 urlpatterns = [
-    path('healthz', healthz),
-    path('readyz', readyz),
+    path("healthz", healthz),
+    path("readyz", readyz),
     # Versioned API (primary)
-    path('api/v1/', include('backend_app.urls')),
+    path("api/v1/", include("backend_app.urls")),
     # Django admin — restricted to is_admin users via custom admin site.
-    path('admin/', admin_site.urls),
+    path("admin/", admin_site.urls),
 ]
 
 # Serve uploaded media in development only.
@@ -49,7 +50,7 @@ if getattr(settings, "DEBUG", False):
 if _docs_enabled():
     urlpatterns = [
         # OpenAPI schema + Swagger UI
-        path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-        path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+        path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
         *urlpatterns,
     ]

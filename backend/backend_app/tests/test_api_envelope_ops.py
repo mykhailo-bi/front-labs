@@ -3,6 +3,7 @@ from rest_framework.test import APIClient
 
 pytestmark = pytest.mark.django_db
 
+
 class ApiEnvelopeAndOpsTests:
     @pytest.fixture(autouse=True)
     def _setup(self):

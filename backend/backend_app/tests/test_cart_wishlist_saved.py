@@ -7,6 +7,7 @@ from backend_app.security import hash_password
 
 pytestmark = pytest.mark.django_db
 
+
 class CartWishlistSavedAddressTests:
     @pytest.fixture(autouse=True)
     def _setup(self):
@@ -229,7 +230,7 @@ class CartWishlistSavedAddressTests:
         assert res.data["user_id"] == self.user.id
 
     def test_address_default_uniqueness_self_update(self):
-        addr1 = models.Address.objects.create(
+        models.Address.objects.create(
             user=self.user,
             full_name="User",
             phone="+100",

@@ -8,6 +8,7 @@ from backend_app.security import hash_password
 
 pytestmark = pytest.mark.django_db
 
+
 class EcommerceFlowTests:
     @pytest.fixture(autouse=True)
     def _setup(self):
@@ -96,7 +97,9 @@ class EcommerceFlowTests:
         assert models.Order.objects.filter(user=user).count() == 1
 
         # Checkout idempotency should return same order even though cart is now empty
-        res2 = self.client.post("/api/v1/checkout/", {}, format="json", **self._auth(access), **idem)
+        res2 = self.client.post(
+            "/api/v1/checkout/", {}, format="json", **self._auth(access), **idem
+        )
         assert res2.status_code == 201
         assert res2.data["id"] == order_id
         assert models.Order.objects.filter(user=user).count() == 1

@@ -2,14 +2,15 @@ import pytest
 from decimal import Decimal
 from datetime import timedelta
 from unittest import mock
-from django.utils import timezone
 from django.core.management import call_command
+from django.utils import timezone
 from backend_app import models
 from backend_app.domain.order_status import OrderStatus
 from backend_app.security import hash_password
 from backend_app.management.commands import release_expired_reservations as release_cmd
 
 pytestmark = pytest.mark.django_db
+
 
 class ReservationExpiryCommandTests:
     @pytest.fixture(autouse=True)
@@ -30,9 +31,6 @@ class ReservationExpiryCommandTests:
         )
 
     def test_release_expired_reservations_cancels_and_releases(self):
-        from django.utils import timezone
-        from django.core.management import call_command
-
         order = models.Order.objects.create(
             user=self.user,
             status=OrderStatus.PLACED,
@@ -59,7 +57,7 @@ class ReservationExpiryCommandTests:
         models.OrderContent.objects.create(order=order, product=self.product, count=2)
         models.Product.objects.filter(id=self.product.id).update(reserved_qty=1)
 
-        not_expired = models.Order.objects.create(
+        models.Order.objects.create(
             user=self.user,
             status=OrderStatus.PLACED,
             reservation_expires_at=now + timedelta(seconds=3600),
@@ -75,7 +73,7 @@ class ReservationExpiryCommandTests:
 
     def test_release_expired_reservations_skips_wrong_status(self):
         now = timezone.now()
-        order = models.Order.objects.create(
+        models.Order.objects.create(
             user=self.user,
             status=OrderStatus.PAID,
             reservation_expires_at=now - timedelta(seconds=1),
@@ -96,9 +94,12 @@ class ReservationExpiryCommandTests:
         order.status = OrderStatus.PAID
 
         cmd = release_cmd.Command()
-        with mock.patch.object(cmd, "stdout") as stdout, mock.patch(
-            "backend_app.management.commands.release_expired_reservations.Order.objects.select_for_update"
-        ) as select_for_update:
+        with (
+            mock.patch.object(cmd, "stdout") as stdout,
+            mock.patch(
+                "backend_app.management.commands.release_expired_reservations.Order.objects.select_for_update"
+            ) as select_for_update,
+        ):
             select_for_update.return_value.get.return_value = order
             cmd.handle(limit=10)
             assert stdout.write.called
@@ -114,9 +115,12 @@ class ReservationExpiryCommandTests:
         order.reservation_expires_at = timezone.now() + timedelta(minutes=5)
 
         cmd = release_cmd.Command()
-        with mock.patch.object(cmd, "stdout") as stdout, mock.patch(
-            "backend_app.management.commands.release_expired_reservations.Order.objects.select_for_update"
-        ) as select_for_update:
+        with (
+            mock.patch.object(cmd, "stdout") as stdout,
+            mock.patch(
+                "backend_app.management.commands.release_expired_reservations.Order.objects.select_for_update"
+            ) as select_for_update,
+        ):
             select_for_update.return_value.get.return_value = order
             cmd.handle(limit=10)
             assert stdout.write.called
@@ -130,9 +134,12 @@ class ReservationExpiryCommandTests:
         models.OrderContent.objects.create(order=order, product=self.product, count=1)
 
         cmd = release_cmd.Command()
-        with mock.patch.object(cmd, "stdout") as stdout, mock.patch(
-            "backend_app.management.commands.release_expired_reservations.Product.objects.select_for_update"
-        ) as select_for_update:
+        with (
+            mock.patch.object(cmd, "stdout") as stdout,
+            mock.patch(
+                "backend_app.management.commands.release_expired_reservations.Product.objects.select_for_update"
+            ) as select_for_update,
+        ):
             select_for_update.return_value.filter.return_value = []
             cmd.handle(limit=10)
             assert stdout.write.called

@@ -10,7 +10,6 @@ import os
 
 from .settings import *  # noqa
 
-
 # Production MUST disable debug.
 DEBUG = False
 

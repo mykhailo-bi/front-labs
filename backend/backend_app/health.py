@@ -16,7 +16,6 @@ from backend_app.serializers import (
     ReadyzOkResponseSerializer,
 )
 
-
 # Readiness can be polled frequently by orchestrators. Migration planning can be
 # expensive, so cache successful checks briefly (per-process).
 _READYZ_LAST_OK_AT: float | None = None
@@ -43,7 +42,9 @@ def healthz(request):
     description="Readiness: DB connectivity + migrations applied.",
     responses={
         200: ReadyzOkResponseSerializer,
-        503: OpenApiResponse(response=ReadyzNotReadyResponseSerializer, description="Pending migrations"),
+        503: OpenApiResponse(
+            response=ReadyzNotReadyResponseSerializer, description="Pending migrations"
+        ),
     },
 )
 @api_view(["GET"])

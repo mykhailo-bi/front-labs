@@ -1,5 +1,4 @@
 import pytest
-from decimal import Decimal
 from django.test import override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
@@ -9,6 +8,7 @@ from backend_app.domain.order_status import OrderStatus
 from backend_app.security import hash_password
 
 pytestmark = pytest.mark.django_db
+
 
 class UserOrdersRouteAuthTests:
     @pytest.fixture(autouse=True)
@@ -46,18 +46,24 @@ class UserOrdersRouteAuthTests:
         return {"HTTP_AUTHORIZATION": f"Bearer {token}"}
 
     def test_user_orders_self_allowed(self):
-        res = self.client.get(f"/api/v1/users/{self.user1.id}/orders/", **self._auth(self.user1_token))
+        res = self.client.get(
+            f"/api/v1/users/{self.user1.id}/orders/", **self._auth(self.user1_token)
+        )
         assert res.status_code == 200
         assert "results" in res.data
         assert len(res.data["results"]) == 1
         assert res.data["results"][0]["user_id"] == self.user1.id
 
     def test_user_orders_other_forbidden_for_non_admin(self):
-        res = self.client.get(f"/api/v1/users/{self.user2.id}/orders/", **self._auth(self.user1_token))
+        res = self.client.get(
+            f"/api/v1/users/{self.user2.id}/orders/", **self._auth(self.user1_token)
+        )
         assert res.status_code == 403
 
     def test_user_orders_other_allowed_for_admin(self):
-        res = self.client.get(f"/api/v1/users/{self.user2.id}/orders/", **self._auth(self.admin_token))
+        res = self.client.get(
+            f"/api/v1/users/{self.user2.id}/orders/", **self._auth(self.admin_token)
+        )
         assert res.status_code == 200
         assert "results" in res.data
         assert len(res.data["results"]) == 1

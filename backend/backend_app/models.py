@@ -16,16 +16,16 @@ from backend_app.domain.order_status import OrderStatus
 
 
 class Cart(models.Model):
-    user = models.ForeignKey('User', models.CASCADE)
-    product = models.ForeignKey('Product', models.CASCADE)
+    user = models.ForeignKey("User", models.CASCADE)
+    product = models.ForeignKey("Product", models.CASCADE)
     count = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        
-        db_table = 'cart'
-        unique_together = (('user', 'product'),)
+
+        db_table = "cart"
+        unique_together = (("user", "product"),)
         indexes = [models.Index(fields=["user"], name="cart_user_idx")]
 
 
@@ -35,27 +35,29 @@ class Image(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        
-        db_table = 'image'
+
+        db_table = "image"
 
 
 class Category(models.Model):
     name = models.CharField(max_length=64)
     slug = models.CharField(max_length=64, unique=True)
-    parent = models.ForeignKey('self', models.SET_NULL, blank=True, null=True)
+    parent = models.ForeignKey("self", models.SET_NULL, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'category'
+        db_table = "category"
         indexes = [models.Index(fields=["slug"], name="category_slug_idx")]
 
 
 class Order(models.Model):
-    user = models.ForeignKey('User', models.PROTECT)
-    products = models.ManyToManyField('Product', through='OrderContent')
+    user = models.ForeignKey("User", models.PROTECT)
+    products = models.ManyToManyField("Product", through="OrderContent")
 
-    status = models.CharField(max_length=16, default=OrderStatus.PLACED, choices=OrderStatus.CHOICES)
+    status = models.CharField(
+        max_length=16, default=OrderStatus.PLACED, choices=OrderStatus.CHOICES
+    )
 
     # Reservation expiry for stock held during checkout.
     reservation_expires_at = models.DateTimeField(blank=True, null=True)
@@ -97,8 +99,8 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        
-        db_table = 'order'
+
+        db_table = "order"
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "idempotency_key"],
@@ -111,13 +113,13 @@ class Order(models.Model):
 
 class OrderContent(models.Model):
     order = models.ForeignKey(Order, models.CASCADE)
-    product = models.ForeignKey('Product', models.PROTECT)
+    product = models.ForeignKey("Product", models.PROTECT)
     count = models.IntegerField()
 
     class Meta:
-        
-        db_table = 'order_content'
-        unique_together = (('order', 'product'),)
+
+        db_table = "order_content"
+        unique_together = (("order", "product"),)
         indexes = [
             models.Index(fields=["order"], name="ordercontent_order_idx"),
             models.Index(fields=["product"], name="ordercontent_product_idx"),
@@ -147,17 +149,19 @@ class Product(models.Model):
         ),
     )
 
-    images = models.ManyToManyField(Image, through='ProductImage')
+    images = models.ManyToManyField(Image, through="ProductImage")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        
-        db_table = 'product'
+
+        db_table = "product"
         constraints = [
             CheckConstraint(check=Q(stock_qty__gte=0), name="product_stock_qty_gte_0"),
             CheckConstraint(check=Q(reserved_qty__gte=0), name="product_reserved_qty_gte_0"),
-            CheckConstraint(check=Q(reserved_qty__lte=models.F("stock_qty")), name="product_reserved_le_stock"),
+            CheckConstraint(
+                check=Q(reserved_qty__lte=models.F("stock_qty")), name="product_reserved_le_stock"
+            ),
         ]
         indexes = [
             models.Index(fields=["status"], name="product_status_idx"),
@@ -174,22 +178,22 @@ class ProductImage(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        
-        db_table = 'product_image'
-        unique_together = (('product', 'image'),)
+
+        db_table = "product_image"
+        unique_together = (("product", "image"),)
 
 
 class Review(models.Model):
-    user = models.ForeignKey('User', models.CASCADE)
+    user = models.ForeignKey("User", models.CASCADE)
     product = models.ForeignKey(Product, models.CASCADE)
     rating = models.IntegerField()
     text = models.TextField(blank=True, null=True)
-    images = models.ManyToManyField(Image, through='ReviewImage')
+    images = models.ManyToManyField(Image, through="ReviewImage")
 
     class Meta:
-        
-        db_table = 'review'
-        unique_together = (('user', 'product'),)
+
+        db_table = "review"
+        unique_together = (("user", "product"),)
         constraints = [
             CheckConstraint(check=Q(rating__gte=1) & Q(rating__lte=5), name="review_rating_1_5"),
         ]
@@ -197,9 +201,7 @@ class Review(models.Model):
     def clean(self):
         super().clean()
         if self.rating < 1 or self.rating > 5:
-            raise ValidationError(
-                {'rating': 'Rating must be between 1 and 5.'}
-            )
+            raise ValidationError({"rating": "Rating must be between 1 and 5."})
 
 
 class ReviewImage(models.Model):
@@ -207,9 +209,9 @@ class ReviewImage(models.Model):
     image = models.ForeignKey(Image, models.PROTECT)
 
     class Meta:
-        
-        db_table = 'review_image'
-        unique_together = (('review', 'image'),)
+
+        db_table = "review_image"
+        unique_together = (("review", "image"),)
 
 
 class User(models.Model):
@@ -248,11 +250,11 @@ class User(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     avatar = models.ForeignKey(Image, models.SET_NULL, blank=True, null=True)
-    products_in_cart = models.ManyToManyField('Product', through='Cart')
+    products_in_cart = models.ManyToManyField("Product", through="Cart")
 
     class Meta:
-        
-        db_table = 'user'
+
+        db_table = "user"
 
     # Compatibility with DRF/Django expectations.
     @property
@@ -281,6 +283,8 @@ class User(models.Model):
     def get_session_auth_hash(self):
         # Use password_hash as session hash source; rotate when password changes.
         return self.password_hash
+
+
 class Address(models.Model):
     user = models.ForeignKey(User, models.CASCADE)
     label = models.CharField(max_length=64, blank=True, null=True)
@@ -308,7 +312,7 @@ class WishlistItem(models.Model):
 
     class Meta:
         db_table = "wishlist_item"
-        unique_together = (('user', 'product'),)
+        unique_together = (("user", "product"),)
 
 
 class SavedItem(models.Model):
@@ -318,7 +322,7 @@ class SavedItem(models.Model):
 
     class Meta:
         db_table = "saved_item"
-        unique_together = (('user', 'product'),)
+        unique_together = (("user", "product"),)
 
 
 class PaymentAttempt(models.Model):
@@ -363,7 +367,9 @@ class OrderEvent(models.Model):
 
     class Meta:
         db_table = "order_event"
-        indexes = [models.Index(fields=["order", "created_at"], name="order_event_order_created_idx")]
+        indexes = [
+            models.Index(fields=["order", "created_at"], name="order_event_order_created_idx")
+        ]
 
 
 class BlacklistedToken(models.Model):

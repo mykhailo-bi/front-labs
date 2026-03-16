@@ -49,7 +49,6 @@ def refresh_access_token(*, refresh_token: str) -> str:
 
     # Enforce blacklist on the refresh token JTI before issuing a new access token.
     jti = refresh.get("jti")
-    exp = refresh.get("exp")
 
     if jti and models.BlacklistedToken.objects.filter(jti=jti).exists():
         raise AuthenticationFailed("Token has been revoked")

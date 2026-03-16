@@ -40,4 +40,3 @@ def can_transition(*, from_status: str, to_status: str) -> bool:
     if from_status == to_status:
         return True
     return Transition(from_status, to_status) in ALLOWED_TRANSITIONS
-

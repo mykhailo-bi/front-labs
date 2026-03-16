@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-ENV_FILE = BASE_DIR / '.env'
+ENV_FILE = BASE_DIR / ".env"
 # `.env` is a local convenience; in CI/production env vars may be injected without a file.
 if ENV_FILE.exists():
     load_dotenv(dotenv_path=ENV_FILE)
@@ -27,7 +27,7 @@ if ENV_FILE.exists():
 
 def _required_env(name: str) -> str:
     val = os.getenv(name)
-    if val is None or val == '':
+    if val is None or val == "":
         raise RuntimeError(
             f"Missing required environment variable: {name}. "
             f"Create '{ENV_FILE}' from '.env.example' (in the backend directory) or export it in your shell."
@@ -39,13 +39,15 @@ def _required_env(name: str) -> str:
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = _required_env('DJANGO_SECRET_KEY')
+SECRET_KEY = _required_env("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Default is safe (False). Enable explicitly via env var for local/dev.
-DEBUG = str(os.getenv('DJANGO_DEBUG', '')).lower() in ('1', 'true', 'yes', 'on')
+DEBUG = str(os.getenv("DJANGO_DEBUG", "")).lower() in ("1", "true", "yes", "on")
 
-_allowed_hosts_raw = [h.strip() for h in os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',') if h.strip()]
+_allowed_hosts_raw = [
+    h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",") if h.strip()
+]
 if _allowed_hosts_raw:
     ALLOWED_HOSTS = _allowed_hosts_raw
 elif DEBUG:
@@ -73,44 +75,44 @@ if not os.getenv("SESSION_COOKIE_SECURE"):
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.contenttypes',
+    "django.contrib.admin",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.contenttypes",
     # Required by SimpleJWT dependency (imports django.contrib.auth models).
     # NOTE: We are NOT using Django's built-in auth.User as our application user.
-    'django.contrib.auth',
+    "django.contrib.auth",
     # Required for serving drf-spectacular Swagger UI static assets in DEBUG.
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'drf_spectacular',
-    'backend_app.apps.BackendAppConfig',
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "drf_spectacular",
+    "backend_app.apps.BackendAppConfig",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'backend_app.middleware.RequestIdMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "backend_app.middleware.RequestIdMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
 ]
 
-ROOT_URLCONF = 'backend_project.urls'
+ROOT_URLCONF = "backend_project.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
         # Needed for drf-spectacular's built-in templates (e.g. swagger_ui.html)
         # and any future app-provided templates.
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
                 # Keep minimal, but include request to support template rendering needs.
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     }
@@ -118,64 +120,64 @@ TEMPLATES = [
 
 # DRF: JSON-only API (no browsable API/templates)
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
     ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
     ],
     # Token auth (custom JWT) is enforced per-view via permission classes.
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'backend_app.auth.SimpleJWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "backend_app.auth.SimpleJWTAuthentication",
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
+    "DEFAULT_PERMISSION_CLASSES": [
         # Secure-by-default: endpoints must explicitly opt-out for public access.
         # Public endpoints in this project set permission classes explicitly.
-        'rest_framework.permissions.IsAuthenticated',
+        "rest_framework.permissions.IsAuthenticated",
     ],
     # API quality defaults
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': int(os.getenv('API_PAGE_SIZE', '20')),
-    'DEFAULT_FILTER_BACKENDS': [
-        'rest_framework.filters.SearchFilter',
-        'rest_framework.filters.OrderingFilter',
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": int(os.getenv("API_PAGE_SIZE", "20")),
+    "DEFAULT_FILTER_BACKENDS": [
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
     ],
     # Basic rate limiting (can be tuned via env vars)
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': os.getenv('API_THROTTLE_ANON', '60/min'),
-        'user': os.getenv('API_THROTTLE_USER', '600/min'),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("API_THROTTLE_ANON", "60/min"),
+        "user": os.getenv("API_THROTTLE_USER", "600/min"),
         # Dedicated scope for password reset endpoints to mitigate abuse.
-        'password_reset': os.getenv('API_THROTTLE_PASSWORD_RESET', '10/hour'),
+        "password_reset": os.getenv("API_THROTTLE_PASSWORD_RESET", "10/hour"),
         # Email verification throttling.
-        'email_verification': os.getenv('API_THROTTLE_EMAIL_VERIFICATION', '10/hour'),
+        "email_verification": os.getenv("API_THROTTLE_EMAIL_VERIFICATION", "10/hour"),
     },
     # Avoid importing/using Django's auth AnonymousUser.
-    'UNAUTHENTICATED_USER': None,
+    "UNAUTHENTICATED_USER": None,
     # Standardized error envelope.
-    'EXCEPTION_HANDLER': 'backend_app.exceptions.drf_exception_handler',
+    "EXCEPTION_HANDLER": "backend_app.exceptions.drf_exception_handler",
     # OpenAPI schema generation.
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 
 # drf-spectacular
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Backend API',
-    'DESCRIPTION': 'JSON-only API.',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
+    "TITLE": "Backend API",
+    "DESCRIPTION": "JSON-only API.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
     # Tell docs about Bearer tokens.
-    'SECURITY': [{'bearerAuth': []}],
-    'COMPONENT_SPLIT_REQUEST': True,
-    'COMPONENT_SECURITY_SCHEMES': {
-        'bearerAuth': {
-            'type': 'http',
-            'scheme': 'bearer',
-            'bearerFormat': 'JWT',
+    "SECURITY": [{"bearerAuth": []}],
+    "COMPONENT_SPLIT_REQUEST": True,
+    "COMPONENT_SECURITY_SCHEMES": {
+        "bearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
         }
     },
 }
@@ -183,37 +185,37 @@ SPECTACULAR_SETTINGS = {
 
 # Logging: JSON to stdout (production-friendly; works locally too).
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'json': {
-            '()': 'backend_app.logging.JsonFormatter',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": "backend_app.logging.JsonFormatter",
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'json',
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+    "root": {
+        "handlers": ["console"],
+        "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
     },
 }
 
-WSGI_APPLICATION = 'backend_project.wsgi.application'
+WSGI_APPLICATION = "backend_project.wsgi.application"
 
 
 # JWT settings (kept for backward-compatible env var names)
 # Treat empty string as unset.
-JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY') or SECRET_KEY
-JWT_ACCESS_TTL_SECONDS = int(os.getenv('JWT_ACCESS_TTL_SECONDS', '900'))  # 15 minutes
-JWT_REFRESH_TTL_SECONDS = int(os.getenv('JWT_REFRESH_TTL_SECONDS', '1209600'))  # 14 days
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY") or SECRET_KEY
+JWT_ACCESS_TTL_SECONDS = int(os.getenv("JWT_ACCESS_TTL_SECONDS", "900"))  # 15 minutes
+JWT_REFRESH_TTL_SECONDS = int(os.getenv("JWT_REFRESH_TTL_SECONDS", "1209600"))  # 14 days
 
 
 # Order reservation TTL (how long stock stays reserved after checkout before release job cancels it).
-ORDER_RESERVATION_TTL_SECONDS = int(os.getenv('ORDER_RESERVATION_TTL_SECONDS', str(30 * 60)))
+ORDER_RESERVATION_TTL_SECONDS = int(os.getenv("ORDER_RESERVATION_TTL_SECONDS", str(30 * 60)))
 
 # Totals calculation (placeholders for now; server-derived)
 ORDER_CURRENCY = os.getenv("ORDER_CURRENCY", "USD")
@@ -227,34 +229,34 @@ ORDER_DISCOUNT_RATE = os.getenv("ORDER_DISCOUNT_RATE", "0")
 # SimpleJWT settings (token issuance/verification)
 SIMPLE_JWT = {
     # Keep signature behavior compatible with the previous implementation.
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': JWT_SECRET_KEY,
-    'ACCESS_TOKEN_LIFETIME': timedelta(seconds=JWT_ACCESS_TTL_SECONDS),
-    'REFRESH_TOKEN_LIFETIME': timedelta(seconds=JWT_REFRESH_TTL_SECONDS),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": JWT_SECRET_KEY,
+    "ACCESS_TOKEN_LIFETIME": timedelta(seconds=JWT_ACCESS_TTL_SECONDS),
+    "REFRESH_TOKEN_LIFETIME": timedelta(seconds=JWT_REFRESH_TTL_SECONDS),
     # This project uses a custom user model (backend_app.models.User) without Django auth.
     # Tokens store the user id in the default claim.
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
     # Ensure Authorization: Bearer <token>
-    'AUTH_HEADER_TYPES': ('Bearer',),
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 
 # Docs exposure toggle (read by backend_project.urls).
-SPECTACULAR_ENABLE_DOCS = os.getenv('SPECTACULAR_ENABLE_DOCS', '')
+SPECTACULAR_ENABLE_DOCS = os.getenv("SPECTACULAR_ENABLE_DOCS", "")
 
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': _required_env('DB_ENGINE'),
-        'NAME': _required_env('DB_NAME'),
-        'USER': _required_env('DB_USER'),
-        'PASSWORD': _required_env('DB_PASSWORD'),
-        'HOST': _required_env('DB_HOST'),
-        'PORT': _required_env('DB_PORT'),
+    "default": {
+        "ENGINE": _required_env("DB_ENGINE"),
+        "NAME": _required_env("DB_NAME"),
+        "USER": _required_env("DB_USER"),
+        "PASSWORD": _required_env("DB_PASSWORD"),
+        "HOST": _required_env("DB_HOST"),
+        "PORT": _required_env("DB_PORT"),
     }
 }
 
@@ -262,9 +264,9 @@ DATABASES = {
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -274,7 +276,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
 
 # Media (user-uploaded files)
 # In production these should be served by a reverse proxy / object storage.
@@ -305,4 +307,4 @@ IMAGE_UPLOAD_MAX_BYTES = int(os.getenv("IMAGE_UPLOAD_MAX_BYTES", str(5 * 1024 * 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

@@ -47,7 +47,9 @@ class UserSerializer(serializers.ModelSerializer):
         if not password:
             raise serializers.ValidationError({"password": "Password is required."})
         if len(password) < 8:
-            raise serializers.ValidationError({"password": "Password must be at least 8 characters."})
+            raise serializers.ValidationError(
+                {"password": "Password must be at least 8 characters."}
+            )
         validated_data["password_hash"] = hash_password(password)
         # Never allow creating admins via public flows.
         return super().create(validated_data)
@@ -56,7 +58,9 @@ class UserSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password", None)
         if password:
             if len(password) < 8:
-                raise serializers.ValidationError({"password": "Password must be at least 8 characters."})
+                raise serializers.ValidationError(
+                    {"password": "Password must be at least 8 characters."}
+                )
             instance.password_hash = hash_password(password)
         return super().update(instance, validated_data)
 
@@ -203,7 +207,11 @@ class ProductSerializer(serializers.ModelSerializer):
     def validate_sku(self, value):
         if value is None or value == "":
             return None
-        if models.Product.objects.filter(sku=value).exclude(pk=getattr(self.instance, "pk", None)).exists():
+        if (
+            models.Product.objects.filter(sku=value)
+            .exclude(pk=getattr(self.instance, "pk", None))
+            .exists()
+        ):
             raise serializers.ValidationError("SKU is already taken.")
         return value
 
@@ -346,7 +354,9 @@ class ReviewSerializer(serializers.ModelSerializer):
         # Only enforce eligibility on create.
         if self.instance is None and user and product:
             if models.Review.objects.filter(user=user, product=product).exists():
-                raise serializers.ValidationError({"product_id": "You already reviewed this product."})
+                raise serializers.ValidationError(
+                    {"product_id": "You already reviewed this product."}
+                )
 
             eligible = models.OrderContent.objects.filter(
                 order__user=user,
@@ -371,7 +381,9 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class AddressSerializer(serializers.ModelSerializer):
-    user_id = serializers.PrimaryKeyRelatedField(source="user", queryset=models.User.objects.all(), required=False)
+    user_id = serializers.PrimaryKeyRelatedField(
+        source="user", queryset=models.User.objects.all(), required=False
+    )
 
     class Meta:
         model = models.Address
@@ -405,7 +417,9 @@ class AddressSerializer(serializers.ModelSerializer):
                 if self.instance:
                     qs = qs.exclude(pk=self.instance.pk)
                 if qs.exists():
-                    raise serializers.ValidationError({"is_default": "Default address already set."})
+                    raise serializers.ValidationError(
+                        {"is_default": "Default address already set."}
+                    )
         return attrs
 
 
@@ -416,7 +430,9 @@ class WishlistItemSerializer(serializers.ModelSerializer):
         required=False,
         default=serializers.CurrentUserDefault(),
     )
-    product_id = serializers.PrimaryKeyRelatedField(source="product", queryset=models.Product.objects.all())
+    product_id = serializers.PrimaryKeyRelatedField(
+        source="product", queryset=models.Product.objects.all()
+    )
 
     class Meta:
         model = models.WishlistItem
@@ -431,7 +447,11 @@ class WishlistItemSerializer(serializers.ModelSerializer):
             user = request.user
             attrs["user"] = user
         product = attrs.get("product")
-        if user and product and models.WishlistItem.objects.filter(user=user, product=product).exists():
+        if (
+            user
+            and product
+            and models.WishlistItem.objects.filter(user=user, product=product).exists()
+        ):
             raise serializers.ValidationError({"product_id": "Product is already in wishlist."})
         return attrs
 
@@ -445,12 +465,18 @@ class WishlistItemSerializer(serializers.ModelSerializer):
         # Pre-check uniqueness to surface field-specific error instead of non_field_errors
         user = validated_data.get("user")
         product = validated_data.get("product")
-        if user and product and models.WishlistItem.objects.filter(user=user, product=product).exists():
+        if (
+            user
+            and product
+            and models.WishlistItem.objects.filter(user=user, product=product).exists()
+        ):
             raise serializers.ValidationError({"product_id": "Product is already in wishlist."})
         try:
             return super().create(validated_data)
         except IntegrityError as exc:
-            raise serializers.ValidationError({"product_id": "Product is already in wishlist."}) from exc
+            raise serializers.ValidationError(
+                {"product_id": "Product is already in wishlist."}
+            ) from exc
 
 
 class SavedItemSerializer(serializers.ModelSerializer):
@@ -460,7 +486,9 @@ class SavedItemSerializer(serializers.ModelSerializer):
         required=False,
         default=serializers.CurrentUserDefault(),
     )
-    product_id = serializers.PrimaryKeyRelatedField(source="product", queryset=models.Product.objects.all())
+    product_id = serializers.PrimaryKeyRelatedField(
+        source="product", queryset=models.Product.objects.all()
+    )
 
     class Meta:
         model = models.SavedItem
@@ -475,7 +503,11 @@ class SavedItemSerializer(serializers.ModelSerializer):
             user = request.user
             attrs["user"] = user
         product = attrs.get("product")
-        if user and product and models.SavedItem.objects.filter(user=user, product=product).exists():
+        if (
+            user
+            and product
+            and models.SavedItem.objects.filter(user=user, product=product).exists()
+        ):
             raise serializers.ValidationError({"product_id": "Product is already saved."})
         return attrs
 
@@ -487,7 +519,11 @@ class SavedItemSerializer(serializers.ModelSerializer):
 
         user = validated_data.get("user")
         product = validated_data.get("product")
-        if user and product and models.SavedItem.objects.filter(user=user, product=product).exists():
+        if (
+            user
+            and product
+            and models.SavedItem.objects.filter(user=user, product=product).exists()
+        ):
             raise serializers.ValidationError({"product_id": "Product is already saved."})
         try:
             return super().create(validated_data)
@@ -509,7 +545,9 @@ class ImageUploadSerializer(serializers.Serializer):
 
 
 class CartItemSerializer(serializers.ModelSerializer):
-    product_id = serializers.PrimaryKeyRelatedField(source="product", queryset=models.Product.objects.all())
+    product_id = serializers.PrimaryKeyRelatedField(
+        source="product", queryset=models.Product.objects.all()
+    )
 
     class Meta:
         model = models.Cart
@@ -623,7 +661,9 @@ class RefundRequestSerializer(serializers.ModelSerializer):
 
 
 class OrderEventSerializer(serializers.ModelSerializer):
-    order_id = serializers.PrimaryKeyRelatedField(source="order", queryset=models.Order.objects.all())
+    order_id = serializers.PrimaryKeyRelatedField(
+        source="order", queryset=models.Order.objects.all()
+    )
 
     class Meta:
         model = models.OrderEvent
@@ -684,8 +724,12 @@ class ReadyzNotReadyResponseSerializer(serializers.Serializer):
 class CheckoutRequestSerializer(serializers.Serializer):
     shipping_full_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     shipping_phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    shipping_address_line1 = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    shipping_address_line2 = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_address_line1 = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
+    shipping_address_line2 = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
     shipping_city = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     shipping_state = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     shipping_postal_code = serializers.CharField(required=False, allow_blank=True, allow_null=True)

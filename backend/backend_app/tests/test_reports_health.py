@@ -1,6 +1,5 @@
 import pytest
 from decimal import Decimal
-from datetime import timedelta
 from unittest import mock
 from rest_framework.test import APIClient, APIRequestFactory
 from backend_app import models
@@ -10,6 +9,7 @@ from backend_app.security import hash_password
 from backend_app import health as health_module
 
 pytestmark = pytest.mark.django_db
+
 
 class ReportsAndHealthTests:
     @pytest.fixture(autouse=True)
@@ -43,7 +43,7 @@ class ReportsAndHealthTests:
             password_hash=hash_password("secret1234"),
             is_admin=False,
         )
-        p1 = models.Product.objects.create(
+        models.Product.objects.create(
             name="R1",
             description="",
             price=Decimal("10.00"),
@@ -52,7 +52,7 @@ class ReportsAndHealthTests:
             reserved_qty=0,
             is_published=True,
         )
-        p2 = models.Product.objects.create(
+        models.Product.objects.create(
             name="R2",
             description="",
             price=Decimal("20.00"),
@@ -61,8 +61,12 @@ class ReportsAndHealthTests:
             reserved_qty=0,
             is_published=True,
         )
-        models.Order.objects.create(user=user, status=OrderStatus.PAID, total=Decimal("10.00"), subtotal=Decimal("10.00"))
-        models.Order.objects.create(user=user, status=OrderStatus.PLACED, total=Decimal("5.00"), subtotal=Decimal("5.00"))
+        models.Order.objects.create(
+            user=user, status=OrderStatus.PAID, total=Decimal("10.00"), subtotal=Decimal("10.00")
+        )
+        models.Order.objects.create(
+            user=user, status=OrderStatus.PLACED, total=Decimal("5.00"), subtotal=Decimal("5.00")
+        )
 
         res = self.client.get("/api/v1/reports/aggregate/", **self._auth_admin())
         assert res.status_code == 200
@@ -88,7 +92,9 @@ class ReportsAndHealthTests:
 
         class DummyExecutor:
             def __init__(self, connection):
-                self.loader = type("L", (), {"graph": type("G", (), {"leaf_nodes": lambda self: []})()})()
+                self.loader = type(
+                    "L", (), {"graph": type("G", (), {"leaf_nodes": lambda self: []})()}
+                )()
 
             def migration_plan(self, leaf_nodes):
                 return []
@@ -96,17 +102,22 @@ class ReportsAndHealthTests:
         class DummyCursor:
             def __init__(self):
                 self.executed = []
+
             def __enter__(self):
                 return self
+
             def __exit__(self, exc_type, exc, tb):
                 return False
+
             def execute(self, sql):
                 self.executed.append(sql)
+
             def fetchone(self):
                 return (1,)
 
-        with mock.patch("backend_app.health.MigrationExecutor", DummyExecutor), mock.patch(
-            "backend_app.health.connection.cursor", return_value=DummyCursor()
+        with (
+            mock.patch("backend_app.health.MigrationExecutor", DummyExecutor),
+            mock.patch("backend_app.health.connection.cursor", return_value=DummyCursor()),
         ):
             response = health_module.readyz(request)
             assert response.status_code == 200
@@ -122,8 +133,9 @@ class ReportsAndHealthTests:
                 return [(type("M", (), {"app_label": "app", "name": "0001"})(), None)]
 
         health_module._READYZ_LAST_OK_AT = None
-        with mock.patch("backend_app.health.MigrationExecutor", DummyExecutorPending), mock.patch(
-            "backend_app.health.connection.cursor", return_value=DummyCursor()
+        with (
+            mock.patch("backend_app.health.MigrationExecutor", DummyExecutorPending),
+            mock.patch("backend_app.health.connection.cursor", return_value=DummyCursor()),
         ):
             response_pending = health_module.readyz(request)
             assert response_pending.status_code == 503

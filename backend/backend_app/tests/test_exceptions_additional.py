@@ -1,9 +1,9 @@
 import pytest
-from django.http import Http404
 from rest_framework import exceptions as drf_exc
 from backend_app import exceptions as exc_module
 
 pytestmark = pytest.mark.django_db
+
 
 class ExceptionsAdditionalTests:
     def _ctx(self, rid):

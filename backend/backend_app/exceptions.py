@@ -70,10 +70,13 @@ def drf_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
         # Generic APIException and other mapped exceptions.
         payload["code"] = getattr(exc, "default_code", "error")
         # `response.data` typically has {'detail': '...'}
-        if isinstance(response.data, dict) and "detail" in response.data and isinstance(response.data["detail"], str):
+        if (
+            isinstance(response.data, dict)
+            and "detail" in response.data
+            and isinstance(response.data["detail"], str)
+        ):
             payload["message"] = response.data["detail"]
         payload["details"] = response.data
 
     response.data = payload
     return response
-

@@ -10,6 +10,7 @@ from backend_app import middleware as middleware_module
 
 pytestmark = pytest.mark.django_db
 
+
 class LoggingAndMiddlewareUnitTests:
     def test_json_formatter_outputs_expected_keys_and_exc_info(self):
         formatter = logging_module.JsonFormatter()
@@ -54,7 +55,10 @@ class LoggingAndMiddlewareUnitTests:
         request_missing = SimpleNamespace(META={})
         response_missing = mw(request_missing)
         assert uuid.UUID(request_missing.request_id)
-        assert response_missing[middleware_module.RequestIdMiddleware.response_header] == request_missing.request_id
+        assert (
+            response_missing[middleware_module.RequestIdMiddleware.response_header]
+            == request_missing.request_id
+        )
 
         # Invalid header (fails regex)
         bad = "!bad"
@@ -62,7 +66,10 @@ class LoggingAndMiddlewareUnitTests:
         response_bad = mw(request_bad)
         assert request_bad.request_id != bad
         assert uuid.UUID(request_bad.request_id)
-        assert response_bad[middleware_module.RequestIdMiddleware.response_header] == request_bad.request_id
+        assert (
+            response_bad[middleware_module.RequestIdMiddleware.response_header]
+            == request_bad.request_id
+        )
 
     def test_request_id_middleware_non_string_and_response_without_header_support(self):
         def get_response(_req):
