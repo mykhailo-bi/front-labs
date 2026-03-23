@@ -22,6 +22,9 @@ const Layout = () => {
                     <NavLink to="/admin/users" className="nav-link">
                         Users
                     </NavLink>
+                    <NavLink to="/admin/data" className="nav-link">
+                        Data
+                    </NavLink>
                 </nav>
                 <div className="profile">
                     <div className="user-meta">
