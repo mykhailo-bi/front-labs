@@ -100,7 +100,7 @@ const LoginPage = () => {
                         <ShieldCheck className="h-3.5 w-3.5" />
                         Secure access
                     </div>
-                    <CardTitle className="text-xl">Front Labs Admin</CardTitle>
+                    <CardTitle className="text-xl">Admin Console</CardTitle>
                     <CardDescription>Sign in to continue to your operations dashboard.</CardDescription>
                 </CardHeader>
 

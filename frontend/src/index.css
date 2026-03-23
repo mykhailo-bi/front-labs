@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -11,6 +11,8 @@
         --foreground: 222 47% 11%;
         --card: 0 0% 100%;
         --card-foreground: 222 47% 11%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222 47% 11%;
         --primary: 222 47% 11%;
         --primary-foreground: 210 40% 98%;
         --secondary: 215 28% 95%;
@@ -25,6 +27,14 @@
         --input: 214 30% 90%;
         --ring: 217 91% 60%;
         --radius: 0.85rem;
+        --sidebar-background: 210 40% 98%;
+        --sidebar-foreground: 222 47% 11%;
+        --sidebar-primary: 222 47% 11%;
+        --sidebar-primary-foreground: 210 40% 98%;
+        --sidebar-accent: 216 26% 93%;
+        --sidebar-accent-foreground: 222 47% 11%;
+        --sidebar-border: 214 30% 88%;
+        --sidebar-ring: 217 91% 60%;
     }
 
     * {

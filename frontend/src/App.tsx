@@ -5,6 +5,7 @@ import AdminRoute from './components/AdminRoute'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import AdminDataPage from './pages/AdminDataPage'
+import AdminDataSectionPage from './pages/AdminDataSectionPage'
 import UsersPage from './pages/UsersPage'
 import UserEditPage from './pages/UserEditPage'
 import UserViewPage from './pages/UserViewPage'
@@ -28,6 +29,14 @@ function App() {
                     element={(
                         <AdminRoute>
                             <AdminDataPage />
+                        </AdminRoute>
+                    )}
+                />
+                <Route
+                    path="data/:sectionId"
+                    element={(
+                        <AdminRoute>
+                            <AdminDataSectionPage />
                         </AdminRoute>
                     )}
                 />

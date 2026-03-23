@@ -36,6 +36,20 @@ const config: Config = {
                     DEFAULT: 'hsl(var(--card))',
                     foreground: 'hsl(var(--card-foreground))',
                 },
+                popover: {
+                    DEFAULT: 'hsl(var(--popover))',
+                    foreground: 'hsl(var(--popover-foreground))',
+                },
+                sidebar: {
+                    DEFAULT: 'hsl(var(--sidebar-background))',
+                    foreground: 'hsl(var(--sidebar-foreground))',
+                    primary: 'hsl(var(--sidebar-primary))',
+                    'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+                    accent: 'hsl(var(--sidebar-accent))',
+                    'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+                    border: 'hsl(var(--sidebar-border))',
+                    ring: 'hsl(var(--sidebar-ring))',
+                },
             },
             borderRadius: {
                 lg: 'var(--radius)',
@@ -50,8 +64,8 @@ const config: Config = {
                 'grid-fade': '100% 100%, 64px 64px, 64px 64px',
             },
             fontFamily: {
-                sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+                sans: ['Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                mono: ['Geist Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
             },
         },
     },
