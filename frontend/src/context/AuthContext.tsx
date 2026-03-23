@@ -1,23 +1,71 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import PropTypes from 'prop-types'
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useState,
+    type Dispatch,
+    type ReactNode,
+    type SetStateAction,
+} from 'react'
 import { clearAuthHeader, setAuthHeader } from '../services/apiClient'
 import { fetchMe, loginRequest, refreshAccess } from '../services/authService'
 
-const AuthContext = createContext(null)
+type AuthUser = {
+    id?: number
+    username?: string
+    email?: string
+    firstname?: string
+    lastname?: string
+    phone?: string
+    role?: string
+    status?: string
+    is_admin?: boolean
+    [key: string]: unknown
+}
+
+type AuthSession = {
+    access?: string
+    refresh?: string
+    user?: AuthUser | null
+} | null
+
+type LoginPayload = {
+    usernameOrEmail: string
+    password: string
+}
+
+type AuthContextValue = {
+    session: AuthSession
+    user: AuthUser | null
+    loading: boolean
+    error: unknown
+    login: (payload: LoginPayload) => Promise<AuthSession>
+    logout: () => void
+    refresh: () => Promise<AuthSession>
+    ready: boolean
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null)
 
 const STORAGE_KEY = 'frontend.auth'
 
-const persistSession = (session) => {
+const persistSession = (session: Exclude<AuthSession, null>) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
 }
 
-const readSession = () => {
+const readSession = (): AuthSession => {
     try {
         const raw = localStorage.getItem(STORAGE_KEY)
         if (!raw) {
             return null
         }
-        return JSON.parse(raw)
+        const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object') {
+            return null
+        }
+        return parsed as AuthSession
     } catch (error) {
         return null
     }
@@ -27,7 +75,7 @@ const dropSession = () => {
     localStorage.removeItem(STORAGE_KEY)
 }
 
-const useSyncAuthHeader = (session) => {
+const useSyncAuthHeader = (session: AuthSession) => {
     useEffect(() => {
         if (session?.access) {
             setAuthHeader(session.access)
@@ -37,7 +85,13 @@ const useSyncAuthHeader = (session) => {
     }, [session])
 }
 
-const useBootstrapSession = (session, setSession, setUser, setError, logout) => {
+const useBootstrapSession = (
+    session: AuthSession,
+    setSession: Dispatch<SetStateAction<AuthSession>>,
+    setUser: Dispatch<SetStateAction<AuthUser | null>>,
+    setError: Dispatch<SetStateAction<unknown>>,
+    logout: () => void,
+) => {
     const [bootstrapping, setBootstrapping] = useState(Boolean(session?.access && !session?.user))
 
     useEffect(() => {
@@ -57,14 +111,15 @@ const useBootstrapSession = (session, setSession, setUser, setError, logout) => 
 
             try {
                 const { data } = await fetchMe()
+                const userData = data as AuthUser
                 const nextSession = { ...session, user: data }
-                setSession((currentSession) => {
+                setSession((currentSession: AuthSession) => {
                     if (!currentSession?.access || currentSession.access !== session.access) {
                         return currentSession
                     }
-                    return { ...currentSession, user: data }
+                    return { ...currentSession, user: userData }
                 })
-                setUser(data)
+                setUser(userData)
                 persistSession(nextSession)
             } catch (err) {
                 setError(err)
@@ -79,11 +134,11 @@ const useBootstrapSession = (session, setSession, setUser, setError, logout) => 
     return bootstrapping
 }
 
-const AuthProvider = ({ children }) => {
-    const [session, setSession] = useState(() => readSession())
-    const [user, setUser] = useState(() => session?.user || null)
+const AuthProvider = ({ children }: { children: ReactNode }) => {
+    const [session, setSession] = useState<AuthSession>(() => readSession())
+    const [user, setUser] = useState<AuthUser | null>(() => session?.user || null)
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState(null)
+    const [error, setError] = useState<unknown>(null)
 
     const logout = useCallback(() => {
         dropSession()
@@ -95,7 +150,7 @@ const AuthProvider = ({ children }) => {
     useSyncAuthHeader(session)
     const bootstrapping = useBootstrapSession(session, setSession, setUser, setError, logout)
 
-    const login = useCallback(async ({ usernameOrEmail, password }) => {
+    const login = useCallback(async ({ usernameOrEmail, password }: LoginPayload) => {
         setLoading(true)
         setError(null)
         try {
@@ -104,10 +159,11 @@ const AuthProvider = ({ children }) => {
             setAuthHeader(baseSession.access)
             persistSession(baseSession)
             const { data: me } = await fetchMe()
-            const nextSession = { ...baseSession, user: me }
+            const userData = me as AuthUser
+            const nextSession = { ...baseSession, user: userData }
             persistSession(nextSession)
             setSession(nextSession)
-            setUser(me)
+            setUser(userData)
             return nextSession
         } catch (err) {
             setError(err)
@@ -135,7 +191,7 @@ const AuthProvider = ({ children }) => {
         }
     }, [session, logout])
 
-    const value = useMemo(() => ({
+    const value = useMemo<AuthContextValue>(() => ({
         session,
         user,
         loading: loading || bootstrapping,
@@ -149,11 +205,7 @@ const AuthProvider = ({ children }) => {
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-AuthProvider.propTypes = {
-    children: PropTypes.node.isRequired,
-}
-
-const useAuth = () => {
+const useAuth = (): AuthContextValue => {
     const ctx = useContext(AuthContext)
     if (!ctx) {
         throw new Error('useAuth must be used within AuthProvider')

@@ -41,7 +41,7 @@ export default [
       'react/prop-types': 'off',
       'react/jsx-props-no-spreading': 'off',
       'import/extensions': ['error', 'never', { json: 'always', js: 'never', jsx: 'never' }],
-      'import/no-extraneous-dependencies': ['error', { devDependencies: ['vite.config.js'] }],
+      'import/no-extraneous-dependencies': ['error', { devDependencies: ['vite.config.ts'] }],
       'import/no-unresolved': 'off',
       'no-console': 'error',
       'arrow-body-style': ['error', 'as-needed'],

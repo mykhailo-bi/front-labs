@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import PropTypes from 'prop-types'
 import { ArrowLeft, Save, UserCog } from 'lucide-react'
 import { createUser, getUser, updateUser } from '../services/userService'
 import Loader from '../components/Loader'
@@ -28,7 +27,9 @@ const initialState = {
 
 const SELECT_CLASS_NAME = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
 
-const useUserForm = (mode, userId) => {
+type UserEditMode = 'create' | 'edit'
+
+const useUserForm = (mode: UserEditMode, userId?: string) => {
     const isCreate = mode === 'create'
     const [form, setForm] = useState(initialState)
     const [loading, setLoading] = useState(!isCreate)
@@ -220,7 +221,7 @@ const UserFormCard = ({
     </Card>
 )
 
-const UserEditPage = ({ mode }) => {
+const UserEditPage = ({ mode }: { mode: UserEditMode }) => {
     const isCreate = mode === 'create'
     const { userId } = useParams()
     const navigate = useNavigate()
@@ -269,10 +270,6 @@ const UserEditPage = ({ mode }) => {
             )}
         </div>
     )
-}
-
-UserEditPage.propTypes = {
-    mode: PropTypes.oneOf(['create', 'edit']).isRequired,
 }
 
 export default UserEditPage

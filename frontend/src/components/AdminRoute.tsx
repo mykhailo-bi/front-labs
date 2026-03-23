@@ -1,18 +1,18 @@
-import PropTypes from 'prop-types'
+import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-const AdminRoute = ({ children }) => {
+type AdminRouteProps = {
+    children: ReactNode
+}
+
+const AdminRoute = ({ children }: AdminRouteProps) => {
     const { user } = useAuth()
 
     if (!user || (!user.is_admin && user.role !== 'admin')) {
         return <Navigate to="/admin" replace />
     }
     return children
-}
-
-AdminRoute.propTypes = {
-    children: PropTypes.node.isRequired,
 }
 
 export default AdminRoute

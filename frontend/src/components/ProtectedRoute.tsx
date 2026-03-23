@@ -1,9 +1,13 @@
-import PropTypes from 'prop-types'
+import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Loader from './Loader'
 
-const ProtectedRoute = ({ children }) => {
+type ProtectedRouteProps = {
+    children: ReactNode
+}
+
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     const { session, ready } = useAuth()
     const location = useLocation()
 
@@ -15,10 +19,6 @@ const ProtectedRoute = ({ children }) => {
         return <Navigate to="/login" replace state={{ from: location }} />
     }
     return children
-}
-
-ProtectedRoute.propTypes = {
-    children: PropTypes.node.isRequired,
 }
 
 export default ProtectedRoute
