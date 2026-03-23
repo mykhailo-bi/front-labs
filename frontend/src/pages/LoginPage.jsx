@@ -12,7 +12,7 @@ const LoginPage = () => {
     const [formError, setFormError] = useState('')
 
     if (ready && session?.access) {
-        return <Navigate to="/" replace />
+        return <Navigate to="/admin" replace />
     }
 
     const handleSubmit = async (event) => {
@@ -20,7 +20,7 @@ const LoginPage = () => {
         setFormError('')
         try {
             await login({ usernameOrEmail, password })
-            const redirectTo = location.state?.from?.pathname || '/'
+            const redirectTo = location.state?.from?.pathname || '/admin'
             navigate(redirectTo, { replace: true })
         } catch (err) {
             const apiMessage = err?.response?.data?.detail || 'Invalid credentials'

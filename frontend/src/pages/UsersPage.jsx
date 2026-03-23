@@ -63,7 +63,7 @@ const UsersPage = () => {
                     <h2 className="page-title">Users</h2>
                     <p className="muted">Manage platform users (admin only).</p>
                 </div>
-                <button type="button" className="btn" onClick={() => navigate('/users/new')}>
+                <button type="button" className="btn" onClick={() => navigate('/admin/users/new')}>
                     + New user
                 </button>
             </div>
@@ -91,10 +91,10 @@ const UsersPage = () => {
                                 <td>{user.status}</td>
                                 <td>
                                     <div className="inline-actions">
-                                        <Link to={`/users/${user.id}`} className="btn secondary">
+                                        <Link to={`/admin/users/${user.id}`} className="btn secondary">
                                             View
                                         </Link>
-                                        <Link to={`/users/${user.id}/edit`} className="btn">
+                                        <Link to={`/admin/users/${user.id}/edit`} className="btn">
                                             Edit
                                         </Link>
                                         <button

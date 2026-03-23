@@ -55,7 +55,7 @@ const UserViewPage = () => {
             )}
             {user && !loading && !error && (
                 <div className="form-actions" style={{ marginTop: '18px' }}>
-                    <Link to={`/users/${user.id}/edit`} className="btn">
+                    <Link to={`/admin/users/${user.id}/edit`} className="btn">
                         Edit user
                     </Link>
                 </div>

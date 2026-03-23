@@ -98,7 +98,7 @@ const UserEditPage = ({ mode }) => {
     const onSubmit = async (event) => {
         const ok = await handleSubmit(event)
         if (ok) {
-            navigate('/users', { replace: true })
+            navigate('/admin/users', { replace: true })
         }
     }
 

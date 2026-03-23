@@ -16,10 +16,10 @@ const Layout = () => {
             <header className="app-header">
                 <div className="brand">Front Labs Admin</div>
                 <nav className="nav">
-                    <NavLink to="/" end className="nav-link">
+                    <NavLink to="/admin" end className="nav-link">
                         Dashboard
                     </NavLink>
-                    <NavLink to="/users" className="nav-link">
+                    <NavLink to="/admin/users" className="nav-link">
                         Users
                     </NavLink>
                 </nav>
@@ -38,7 +38,7 @@ const Layout = () => {
             </main>
             <footer className="app-footer">
                 <span>
-                    <Link to="/">Home</Link>
+                    <Link to="/admin">Home</Link>
                 </span>
                 <span>Built for Front Labs</span>
             </footer>

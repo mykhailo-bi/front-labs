@@ -12,7 +12,9 @@ function App() {
     return (
         <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<Navigate to="/admin" replace />} />
             <Route
+                path="/admin"
                 element={(
                     <ProtectedRoute>
                         <Layout />
