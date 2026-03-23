@@ -9,13 +9,24 @@ const useUsersData = () => {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
+    const normalizeUsers = (payload) => {
+        if (Array.isArray(payload)) {
+            return payload
+        }
+        if (Array.isArray(payload?.results)) {
+            return payload.results
+        }
+        return []
+    }
+
     const load = useCallback(async () => {
         setLoading(true)
         setError('')
         try {
             const { data } = await listUsers()
-            setUsers(data)
+            setUsers(normalizeUsers(data))
         } catch (err) {
+            setUsers([])
             setError(err?.response?.data?.detail || 'Failed to load users')
         } finally {
             setLoading(false)
@@ -71,7 +82,7 @@ const UsersPage = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {users.map((user) => (
+                        {Array.isArray(users) && users.map((user) => (
                             <tr key={user.id}>
                                 <td>{user.id}</td>
                                 <td>{user.username}</td>
