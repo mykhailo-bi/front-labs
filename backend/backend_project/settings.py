@@ -83,22 +83,25 @@ INSTALLED_APPS = [
     # NOTE: We are NOT using Django's built-in auth.User as our application user.
     "django.contrib.auth",
     # Required for serving drf-spectacular Swagger UI static assets in DEBUG.
-    "django.contrib.staticfiles",
-    "rest_framework",
-    "drf_spectacular",
-    "backend_app.apps.BackendAppConfig",
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'drf_spectacular',
+    'backend_app.apps.BackendAppConfig',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "backend_app.middleware.RequestIdMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'backend_app.middleware.RequestIdMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
-ROOT_URLCONF = "backend_project.urls"
+ROOT_URLCONF = 'backend_project.urls'
+CORS_ALLOW_ALL_ORIGINS = True
 
 TEMPLATES = [
     {

@@ -1,6 +1,6 @@
 # front-labs
 
-This repository contains lab work. The backend code has been moved into [`backend/`](backend/).
+This repository contains lab work. The backend code has been moved into [`backend/`](backend/) and the SPA frontend lives in [`frontend/`](frontend/).
 
 ## Backend (Django REST / JSON API)
 
@@ -25,6 +25,26 @@ uv run python manage.py runserver
 ```
 
 The API will be available at `http://127.0.0.1:8000/`.
+
+## Frontend (React SPA)
+
+- Source: [`frontend/`](frontend/)
+- Dev server: http://localhost:8000 (proxied to the backend API)
+
+### Quick start
+
+```bash
+cd frontend
+npm install
+
+# start dev server
+npm run dev
+
+# lint (AirBnB 4-space rules)
+npm run lint
+```
+
+By default the frontend proxies `/api` to `http://localhost:8000`. Override with `VITE_API_URL` if needed.
 
 ### Notes
 
