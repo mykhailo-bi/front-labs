@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import PropTypes from 'prop-types'
+import { ArrowLeft, Save, UserCog } from 'lucide-react'
 import { createUser, getUser, updateUser } from '../services/userService'
-import FormField from '../components/FormField'
 import Loader from '../components/Loader'
+import { Button } from '../components/ui/button'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '../components/ui/card'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
 
 const initialState = {
     username: '',
@@ -15,6 +25,8 @@ const initialState = {
     status: 'active',
     password: '',
 }
+
+const SELECT_CLASS_NAME = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
 
 const useUserForm = (mode, userId) => {
     const isCreate = mode === 'create'
@@ -79,8 +91,134 @@ const useUserForm = (mode, userId) => {
         }
     }
 
-    return { form, loading, error, submitting, handleChange, handleSubmit, setError }
+    return { form, loading, error, submitting, handleChange, handleSubmit }
 }
+
+const USER_FIELDS = [
+    { id: 'username', label: 'Username', required: true },
+    { id: 'email', label: 'Email', type: 'email', required: true },
+    { id: 'firstname', label: 'First name' },
+    { id: 'lastname', label: 'Last name' },
+    { id: 'phone', label: 'Phone' },
+]
+
+const UserEditHeader = ({ isCreate, onCancel }) => (
+    <Card className="border-border/80 bg-card/95">
+        <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
+            <div>
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-border/80 bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
+                    <UserCog className="h-3.5 w-3.5" />
+                    Admin only
+                </div>
+                <CardTitle>{isCreate ? 'Create user' : 'Edit user'}</CardTitle>
+                <CardDescription>Manage profile details, role, status, and credentials.</CardDescription>
+            </div>
+            <Button type="button" variant="outline" onClick={onCancel}>
+                <ArrowLeft className="h-4 w-4" />
+                Cancel
+            </Button>
+        </CardHeader>
+    </Card>
+)
+
+const UserInputFields = ({ form, isCreate, onChange }) => (
+    <>
+        {USER_FIELDS.map((field) => (
+            <div className="space-y-2" key={field.id}>
+                <Label htmlFor={field.id}>{field.label}</Label>
+                <Input
+                    id={field.id}
+                    name={field.id}
+                    type={field.type || 'text'}
+                    value={form[field.id]}
+                    onChange={onChange}
+                    required={field.required}
+                />
+            </div>
+        ))}
+
+        <div className="space-y-2">
+            <Label htmlFor="password">Password {isCreate ? '' : '(optional)'}</Label>
+            <Input
+                id="password"
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={onChange}
+                required={isCreate}
+            />
+        </div>
+    </>
+)
+
+const UserSelectFields = ({ form, onChange }) => (
+    <>
+        <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <select
+                id="role"
+                name="role"
+                value={form.role}
+                className={SELECT_CLASS_NAME}
+                onChange={onChange}
+            >
+                <option value="admin">Admin</option>
+                <option value="customer">Customer</option>
+            </select>
+        </div>
+
+        <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <select
+                id="status"
+                name="status"
+                value={form.status}
+                className={SELECT_CLASS_NAME}
+                onChange={onChange}
+            >
+                <option value="active">Active</option>
+                <option value="disabled">Disabled</option>
+            </select>
+        </div>
+    </>
+)
+
+const UserFormCard = ({
+    error,
+    form,
+    isCreate,
+    onSubmit,
+    onCancel,
+    onChange,
+    submitting,
+}) => (
+    <Card className="border-border/80 bg-card/95">
+        <CardContent className="space-y-4 pt-5">
+            {error && (
+                <div className="rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={onSubmit} className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <UserInputFields form={form} isCreate={isCreate} onChange={onChange} />
+                    <UserSelectFields form={form} onChange={onChange} />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={onCancel}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" disabled={submitting}>
+                        <Save className="h-4 w-4" />
+                        {submitting ? 'Saving...' : 'Save'}
+                    </Button>
+                </div>
+            </form>
+        </CardContent>
+    </Card>
+)
 
 const UserEditPage = ({ mode }) => {
     const isCreate = mode === 'create'
@@ -102,45 +240,32 @@ const UserEditPage = ({ mode }) => {
         }
     }
 
+    const handleCancel = () => {
+        navigate(-1)
+    }
+
     return (
-        <div className="page-card">
-            <div className="toolbar">
-                <div>
-                    <h2 className="page-title">{isCreate ? 'Create user' : 'Edit user'}</h2>
-                    <p className="muted">Admin-only user management form.</p>
-                </div>
-            </div>
-            {loading && <Loader />}
-            {error && <div className="error-text">{error}</div>}
-            {!loading && !error && (
-                <form onSubmit={onSubmit}>
-                    <FormField label="Username" name="username" value={form.username} onChange={handleChange} required />
-                    <FormField label="Email" name="email" type="email" value={form.email} onChange={handleChange} required />
-                    <FormField label="First name" name="firstname" value={form.firstname} onChange={handleChange} />
-                    <FormField label="Last name" name="lastname" value={form.lastname} onChange={handleChange} />
-                    <FormField label="Phone" name="phone" value={form.phone} onChange={handleChange} />
-                    <FormField label="Role" name="role" value={form.role} onChange={handleChange}>
-                        <select id="role" name="role" value={form.role} onChange={handleChange}>
-                            <option value="admin">Admin</option>
-                            <option value="customer">Customer</option>
-                        </select>
-                    </FormField>
-                    <FormField label="Status" name="status" value={form.status} onChange={handleChange}>
-                        <select id="status" name="status" value={form.status} onChange={handleChange}>
-                            <option value="active">Active</option>
-                            <option value="disabled">Disabled</option>
-                        </select>
-                    </FormField>
-                    <FormField label="Password" name="password" type="password" value={form.password} onChange={handleChange} required={isCreate} />
-                    <div className="form-actions">
-                        <button type="submit" className="btn" disabled={submitting}>
-                            {submitting ? 'Saving…' : 'Save'}
-                        </button>
-                        <button type="button" className="btn secondary" onClick={() => navigate(-1)}>
-                            Cancel
-                        </button>
-                    </div>
-                </form>
+        <div className="space-y-4">
+            <UserEditHeader isCreate={isCreate} onCancel={handleCancel} />
+
+            {loading && (
+                <Card className="border-border/80 bg-card/95">
+                    <CardContent className="p-5">
+                        <Loader />
+                    </CardContent>
+                </Card>
+            )}
+
+            {!loading && (
+                <UserFormCard
+                    error={error}
+                    form={form}
+                    isCreate={isCreate}
+                    onSubmit={onSubmit}
+                    onCancel={handleCancel}
+                    onChange={handleChange}
+                    submitting={submitting}
+                />
             )}
         </div>
     )

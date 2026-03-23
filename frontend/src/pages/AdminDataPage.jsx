@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Database, RefreshCcw } from 'lucide-react'
 import Loader from '../components/Loader'
 import { listUsers } from '../services/userService'
 import {
@@ -9,7 +10,24 @@ import {
     listProducts,
     listReviews,
 } from '../services/adminService'
-import './AdminDataPage.css'
+import { Button } from '../components/ui/button'
+import { Badge } from '../components/ui/badge'
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '../components/ui/card'
+import {
+    Table,
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '../components/ui/table'
 
 const PAGE_SIZE = 8
 
@@ -30,189 +48,110 @@ const safeDate = (value) => {
     return new Date(value).toLocaleString()
 }
 
-const Section = ({ title, count, children }) => (
-    <section className="data-section">
-        <div className="toolbar compact">
-            <h3 className="data-title">{title}</h3>
-            <span className="chip">{count} rows</span>
-        </div>
-        {children}
-    </section>
-)
+const statusVariant = (status) => {
+    if (status === 'active' || status === 'paid' || status === 'delivered') {
+        return 'success'
+    }
+    if (status === 'pending') {
+        return 'warning'
+    }
+    return 'outline'
+}
 
-const UsersTable = ({ rows }) => (
-    <table className="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows.map((row) => (
-                <tr key={row.id}>
-                    <td>{row.id}</td>
-                    <td>{row.username}</td>
-                    <td>{row.email}</td>
-                    <td><span className="chip">{row.role}</span></td>
-                    <td>{row.status}</td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-)
+const roleVariant = (role) => {
+    if (role === 'admin') {
+        return 'default'
+    }
+    return 'secondary'
+}
 
-const ProductsTable = ({ rows }) => (
-    <table className="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>SKU</th>
-                <th>Name</th>
-                <th>Price</th>
-                <th>Stock</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows.map((row) => (
-                <tr key={row.id}>
-                    <td>{row.id}</td>
-                    <td>{row.sku || '-'}</td>
-                    <td>{row.name}</td>
-                    <td>{row.price}</td>
-                    <td>{row.stock_qty}</td>
-                    <td>{row.status}</td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-)
+const CELL_TRIM = 'max-w-[260px] truncate text-muted-foreground'
 
-const OrdersTable = ({ rows }) => (
-    <table className="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>User</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Created</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows.map((row) => (
-                <tr key={row.id}>
-                    <td>{row.id}</td>
-                    <td>{row.user?.username || row.user || '-'}</td>
-                    <td>{row.status}</td>
-                    <td>{row.total}</td>
-                    <td>{safeDate(row.created_at)}</td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-)
+const sectionColumns = {
+    users: [
+        { header: 'ID', render: (row) => `#${row.id}`, className: 'font-mono text-xs' },
+        { header: 'Username', render: (row) => row.username, className: 'font-medium' },
+        { header: 'Email', render: (row) => row.email, className: 'text-muted-foreground' },
+        { header: 'Role', render: (row) => <Badge variant={roleVariant(row.role)}>{row.role}</Badge> },
+        { header: 'Status', render: (row) => <Badge variant={statusVariant(row.status)}>{row.status}</Badge> },
+    ],
+    products: [
+        { header: 'ID', render: (row) => `#${row.id}`, className: 'font-mono text-xs' },
+        { header: 'SKU', render: (row) => row.sku || '-', className: 'text-muted-foreground' },
+        { header: 'Name', render: (row) => row.name, className: 'font-medium' },
+        { header: 'Price', render: (row) => row.price },
+        { header: 'Stock', render: (row) => row.stock_qty },
+        { header: 'Status', render: (row) => <Badge variant={statusVariant(row.status)}>{row.status}</Badge> },
+    ],
+    orders: [
+        { header: 'ID', render: (row) => `#${row.id}`, className: 'font-mono text-xs' },
+        { header: 'User', render: (row) => row.user?.username || row.user || '-' },
+        { header: 'Status', render: (row) => <Badge variant={statusVariant(row.status)}>{row.status}</Badge> },
+        { header: 'Total', render: (row) => row.total },
+        { header: 'Created', render: (row) => safeDate(row.created_at), className: 'text-muted-foreground' },
+    ],
+    reviews: [
+        { header: 'ID', render: (row) => `#${row.id}`, className: 'font-mono text-xs' },
+        { header: 'User', render: (row) => row.user?.username || row.user || '-' },
+        { header: 'Product', render: (row) => row.product?.name || row.product || '-' },
+        { header: 'Rating', render: (row) => row.rating },
+        { header: 'Comment', render: (row) => row.text || '-', className: CELL_TRIM },
+    ],
+    categories: [
+        { header: 'ID', render: (row) => `#${row.id}`, className: 'font-mono text-xs' },
+        { header: 'Name', render: (row) => row.name, className: 'font-medium' },
+        { header: 'Slug', render: (row) => row.slug, className: 'text-muted-foreground' },
+        { header: 'Parent', render: (row) => row.parent?.name || row.parent || '-' },
+        { header: 'Updated', render: (row) => safeDate(row.updated_at), className: 'text-muted-foreground' },
+    ],
+    images: [
+        { header: 'ID', render: (row) => `#${row.id}`, className: 'font-mono text-xs' },
+        { header: 'URL', render: (row) => row.url, className: CELL_TRIM },
+        { header: 'Created', render: (row) => safeDate(row.created_at), className: 'text-muted-foreground' },
+    ],
+    addresses: [
+        { header: 'ID', render: (row) => `#${row.id}`, className: 'font-mono text-xs' },
+        { header: 'User', render: (row) => row.user?.username || row.user || '-' },
+        { header: 'Label', render: (row) => row.label || '-' },
+        { header: 'City', render: (row) => row.city },
+        { header: 'Country', render: (row) => row.country },
+        { header: 'Default', render: (row) => (row.is_default ? 'Yes' : 'No') },
+    ],
+}
 
-const ReviewsTable = ({ rows }) => (
-    <table className="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>User</th>
-                <th>Product</th>
-                <th>Rating</th>
-                <th>Comment</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows.map((row) => (
-                <tr key={row.id}>
-                    <td>{row.id}</td>
-                    <td>{row.user?.username || row.user || '-'}</td>
-                    <td>{row.product?.name || row.product || '-'}</td>
-                    <td>{row.rating}</td>
-                    <td className="trim-cell">{row.text || '-'}</td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-)
-
-const CategoriesTable = ({ rows }) => (
-    <table className="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Slug</th>
-                <th>Parent</th>
-                <th>Updated</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows.map((row) => (
-                <tr key={row.id}>
-                    <td>{row.id}</td>
-                    <td>{row.name}</td>
-                    <td>{row.slug}</td>
-                    <td>{row.parent?.name || row.parent || '-'}</td>
-                    <td>{safeDate(row.updated_at)}</td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-)
-
-const ImagesTable = ({ rows }) => (
-    <table className="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>URL</th>
-                <th>Created</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows.map((row) => (
-                <tr key={row.id}>
-                    <td>{row.id}</td>
-                    <td className="trim-cell">{row.url}</td>
-                    <td>{safeDate(row.created_at)}</td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
-)
-
-const AddressesTable = ({ rows }) => (
-    <table className="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>User</th>
-                <th>Label</th>
-                <th>City</th>
-                <th>Country</th>
-                <th>Default</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows.map((row) => (
-                <tr key={row.id}>
-                    <td>{row.id}</td>
-                    <td>{row.user?.username || row.user || '-'}</td>
-                    <td>{row.label || '-'}</td>
-                    <td>{row.city}</td>
-                    <td>{row.country}</td>
-                    <td>{row.is_default ? 'Yes' : 'No'}</td>
-                </tr>
-            ))}
-        </tbody>
-    </table>
+const TableSection = ({ title, rows, columns }) => (
+    <Card className="border-border/80 bg-card/95">
+        <CardHeader className="flex-row items-start justify-between space-y-0 pb-3">
+            <div>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>Live API snapshot ({rows.length} rows)</CardDescription>
+            </div>
+            <Badge variant="outline">{rows.length} rows</Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        {columns.map((column) => (
+                            <TableHead key={column.header}>{column.header}</TableHead>
+                        ))}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {rows.map((row) => (
+                        <TableRow key={row.id}>
+                            {columns.map((column) => (
+                                <TableCell key={`${column.header}-${row.id}`} className={column.className}>
+                                    {column.render(row)}
+                                </TableCell>
+                            ))}
+                        </TableRow>
+                    ))}
+                </TableBody>
+                {rows.length === 0 && <TableCaption>No records available.</TableCaption>}
+            </Table>
+        </CardContent>
+    </Card>
 )
 
 const useAdminDataTables = () => {
@@ -283,27 +222,46 @@ const AdminDataPage = () => {
     } = useAdminDataTables()
 
     return (
-        <div className="page-card">
-            <div className="toolbar">
-                <div>
-                    <h2 className="page-title">Admin data tables</h2>
-                    <p className="muted">Snapshot tables for all major entities in the API.</p>
-                </div>
-                <button type="button" className="btn secondary" onClick={reload}>Refresh all</button>
-            </div>
+        <div className="space-y-4">
+            <Card className="border-border/80 bg-card/95">
+                <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                            <Database className="h-4 w-4 text-muted-foreground" />
+                            <CardTitle>Admin data tables</CardTitle>
+                        </div>
+                        <CardDescription>Snapshot tables for major entities in the API.</CardDescription>
+                    </div>
+                    <Button type="button" variant="outline" onClick={reload}>
+                        <RefreshCcw className="h-4 w-4" />
+                        Refresh all
+                    </Button>
+                </CardHeader>
+            </Card>
 
-            {loading && <Loader />}
-            {error && <div className="error-text">{error}</div>}
+            {loading && (
+                <Card className="border-border/80 bg-card/95">
+                    <CardContent className="p-5">
+                        <Loader />
+                    </CardContent>
+                </Card>
+            )}
+
+            {error && (
+                <div className="rounded-lg border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+                    {error}
+                </div>
+            )}
 
             {!loading && !error && (
-                <div className="data-grid">
-                    <Section title="Users" count={users.length}><UsersTable rows={users} /></Section>
-                    <Section title="Products" count={products.length}><ProductsTable rows={products} /></Section>
-                    <Section title="Orders" count={orders.length}><OrdersTable rows={orders} /></Section>
-                    <Section title="Reviews" count={reviews.length}><ReviewsTable rows={reviews} /></Section>
-                    <Section title="Categories" count={categories.length}><CategoriesTable rows={categories} /></Section>
-                    <Section title="Images" count={images.length}><ImagesTable rows={images} /></Section>
-                    <Section title="Addresses" count={addresses.length}><AddressesTable rows={addresses} /></Section>
+                <div className="space-y-4">
+                    <TableSection title="Users" rows={users} columns={sectionColumns.users} />
+                    <TableSection title="Products" rows={products} columns={sectionColumns.products} />
+                    <TableSection title="Orders" rows={orders} columns={sectionColumns.orders} />
+                    <TableSection title="Reviews" rows={reviews} columns={sectionColumns.reviews} />
+                    <TableSection title="Categories" rows={categories} columns={sectionColumns.categories} />
+                    <TableSection title="Images" rows={images} columns={sectionColumns.images} />
+                    <TableSection title="Addresses" rows={addresses} columns={sectionColumns.addresses} />
                 </div>
             )}
         </div>
