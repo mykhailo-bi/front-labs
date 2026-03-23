@@ -38,7 +38,7 @@ const useSyncAuthHeader = (session) => {
 }
 
 const useBootstrapSession = (session, setSession, setUser, setError, logout) => {
-    const [bootstrapping, setBootstrapping] = useState(true)
+    const [bootstrapping, setBootstrapping] = useState(Boolean(session?.access && !session?.user))
 
     useEffect(() => {
         const bootstrap = async () => {
@@ -46,10 +46,24 @@ const useBootstrapSession = (session, setSession, setUser, setError, logout) => 
                 setBootstrapping(false)
                 return
             }
+
+            setBootstrapping(true)
+
+            if (session.user) {
+                setUser(session.user)
+                setBootstrapping(false)
+                return
+            }
+
             try {
                 const { data } = await fetchMe()
                 const nextSession = { ...session, user: data }
-                setSession(nextSession)
+                setSession((currentSession) => {
+                    if (!currentSession?.access || currentSession.access !== session.access) {
+                        return currentSession
+                    }
+                    return { ...currentSession, user: data }
+                })
                 setUser(data)
                 persistSession(nextSession)
             } catch (err) {
@@ -60,7 +74,7 @@ const useBootstrapSession = (session, setSession, setUser, setError, logout) => 
             }
         }
         bootstrap()
-    }, [session, logout, setSession, setUser, setError])
+    }, [session?.access, logout, setSession, setUser, setError])
 
     return bootstrapping
 }
