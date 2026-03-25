@@ -126,12 +126,12 @@ python manage.py migrate
 ### 5) Start the server
 
 ```bash
-python manage.py runserver
+python manage.py runserver 9000
 ```
 
 The API will be available at:
 
-- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:9000/`
 
 ## Authentication
 
@@ -228,17 +228,17 @@ Reporting (admin-only):
 
 ```bash
 # List users
-curl http://127.0.0.1:8000/users/
+curl http://127.0.0.1:9000/users/
 
 # Register
 curl -H 'Content-Type: application/json' \
   -d '{"username":"john","email":"john@example.com","password":"secret123"}' \
-  http://127.0.0.1:8000/auth/register/
+  http://127.0.0.1:9000/auth/register/
 
 # Login
 curl -H 'Content-Type: application/json' \
   -d '{"username_or_email":"john","password":"secret123"}' \
-  http://127.0.0.1:8000/auth/login/
+  http://127.0.0.1:9000/auth/login/
 ```
 
 ## Project layout

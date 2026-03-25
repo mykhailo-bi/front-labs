@@ -45,10 +45,10 @@ cp .env.example .env
 uv venv
 uv pip install -e .[dev]
 uv run python manage.py migrate
-uv run python manage.py runserver
+uv run python manage.py runserver 9000
 ```
 
-The backend serves on `http://127.0.0.1:8000/` by default.
+The backend serves on `http://127.0.0.1:9000/` by default.
 
 ### Backend configuration
 
@@ -69,7 +69,7 @@ Important settings include:
 
 ### Main backend routes
 
-All application API routes are versioned under `http://127.0.0.1:8000/api/v1/`.
+All application API routes are versioned under `http://127.0.0.1:9000/api/v1/`.
 
 Common endpoints:
 
