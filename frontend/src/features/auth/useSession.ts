@@ -53,7 +53,7 @@ export function useSession() {
                 if (!active) {
                     return
                 }
-                if (!currentUser.is_admin) {
+                if (currentUser.role !== 'admin') {
                     applyTokens(null)
                     const message = 'Admin access required for this dashboard'
                     setLoginError(message)
@@ -90,7 +90,7 @@ export function useSession() {
                 const nextTokens = await login(username, password)
                 applyTokens(nextTokens)
                 const currentUser = await fetchCurrentUser()
-                if (!currentUser.is_admin) {
+                if (currentUser.role !== 'admin') {
                     applyTokens(null)
                     throw new Error('Admin access required for this dashboard')
                 }

@@ -29,7 +29,6 @@ class UserSerializer(serializers.ModelSerializer):
             "lastname",
             "description",
             "phone",
-            "is_admin",
             "role",
             "status",
             "is_email_verified",
@@ -40,7 +39,6 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
-            "is_admin",
             "created_at",
             "updated_at",
         ]
@@ -135,7 +133,6 @@ class RegisterSerializer(serializers.Serializer):
         password = validated_data.pop("password")
         user = models.User.objects.create(
             **validated_data,
-            is_admin=False,
             password_hash=hash_password(password),
             is_email_verified=False,
         )
@@ -328,7 +325,7 @@ class OrderSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not request or not request.user:
             return attrs
-        if getattr(request.user, "is_admin", False):
+        if getattr(request.user, "role", None) == "admin":
             return attrs
 
         # Non-admins cannot create/update orders for other users.
@@ -422,7 +419,7 @@ class AddressSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         request = self.context.get("request")
-        if request and not getattr(request.user, "is_admin", False):
+        if request and getattr(request.user, "role", None) != "admin":
             attrs["user"] = request.user
         if attrs.get("is_default"):
             # Ensure only one default per user
@@ -458,7 +455,7 @@ class WishlistItemSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get("request")
         user = attrs.get("user")
-        if request and not getattr(request.user, "is_admin", False):
+        if request and getattr(request.user, "role", None) != "admin":
             user = request.user
             attrs["user"] = user
         product = attrs.get("product")
@@ -514,7 +511,7 @@ class SavedItemSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get("request")
         user = attrs.get("user")
-        if request and not getattr(request.user, "is_admin", False):
+        if request and getattr(request.user, "role", None) != "admin":
             user = request.user
             attrs["user"] = user
         product = attrs.get("product")

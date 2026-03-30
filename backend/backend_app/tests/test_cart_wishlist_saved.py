@@ -16,14 +16,12 @@ class CartWishlistSavedAddressTests:
             username="cart_user",
             email="cart_user@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.user_token = issue_token_pair(user=self.user).access
         self.other_user = models.User.objects.create(
             username="cart_other",
             email="cart_other@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
 
         self.product_active = models.Product.objects.create(

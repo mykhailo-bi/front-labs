@@ -39,7 +39,7 @@ urlpatterns = [
     path("readyz", readyz),
     # Versioned API (primary)
     path("api/v1/", include("backend_app.urls")),
-    # Django admin — restricted to is_admin users via custom admin site.
+    # Django admin — restricted to users with role=admin via custom admin site.
     path("admin/", admin_site.urls),
 ]
 

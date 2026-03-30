@@ -14,7 +14,6 @@ class DbConstraintTests:
             username="u1",
             email="u1@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
 
     def test_order_idempotency_key_unique_per_user_when_not_null(self):

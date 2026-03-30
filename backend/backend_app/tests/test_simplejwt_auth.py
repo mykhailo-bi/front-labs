@@ -19,7 +19,6 @@ class SimpleJWTAuthenticationTests:
             username="jwt_user",
             email="jwt_user@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.auth = auth_module.SimpleJWTAuthentication()
 

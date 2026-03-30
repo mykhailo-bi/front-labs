@@ -19,7 +19,6 @@ class AuthHelperTests:
             username="authh_user",
             email="authh@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
 
     def test_refresh_access_token_token_error_raises_auth_failed(self):

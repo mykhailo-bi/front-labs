@@ -18,13 +18,11 @@ class AuthFlowTests:
             username="auth_user",
             email="auth_user@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.other_user = models.User.objects.create(
             username="auth_user2",
             email="auth_user2@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
 
     def _auth(self, token: str):
@@ -115,7 +113,6 @@ class AuthFlowTests:
             username="other_user",
             email="other@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         access = issue_token_pair(user=self.user).access
         with mock.patch("backend_app.api.MeSerializer.save", side_effect=IntegrityError):

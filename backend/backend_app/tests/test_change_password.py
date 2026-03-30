@@ -16,7 +16,6 @@ class ChangePasswordTests:
             username="cp_user",
             email="cp@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.access = issue_token_pair(user=self.user).access
 

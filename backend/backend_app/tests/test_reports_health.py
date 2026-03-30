@@ -19,14 +19,14 @@ class ReportsAndHealthTests:
             username="admin_reports",
             email="admin_reports@example.com",
             password_hash=hash_password("adminpass123"),
-            is_admin=True,
+            role="admin",
         )
         self.admin_token = issue_token_pair(user=self.admin).access
         self.admin2 = models.User.objects.create(
             username="admin_reports2",
             email="admin_reports2@example.com",
             password_hash=hash_password("adminpass123"),
-            is_admin=True,
+            role="admin",
         )
         self.admin2_token = issue_token_pair(user=self.admin2).access
 
@@ -41,7 +41,6 @@ class ReportsAndHealthTests:
             username="report_user",
             email="report_user@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         models.Product.objects.create(
             name="R1",

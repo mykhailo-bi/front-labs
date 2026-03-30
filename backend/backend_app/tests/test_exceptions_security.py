@@ -119,7 +119,6 @@ class ExceptionsAndSecurityTests:
             username="props_user",
             email="props_user@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         assert user.is_authenticated
         assert not user.is_anonymous

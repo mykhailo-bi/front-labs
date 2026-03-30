@@ -115,7 +115,7 @@ def main() -> None:
             lastname="User",
             description=f"Seeded admin user ({prefix})",
             phone=f"+1000000{rng.randint(1000, 9999)}",
-            is_admin=True,
+            role="admin",
             avatar=admin_avatar,
         )
 
@@ -132,7 +132,6 @@ def main() -> None:
                     lastname="Demo",
                     description=f"Seeded regular user #{i} ({prefix})",
                     phone=f"+2000000{rng.randint(1000, 9999)}",
-                    is_admin=False,
                     avatar=avatar,
                 )
             )

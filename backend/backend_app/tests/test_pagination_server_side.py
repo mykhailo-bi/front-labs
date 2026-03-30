@@ -18,7 +18,6 @@ class ServerSidePaginationTests:
             username="admin_pagination",
             email="admin_pagination@example.com",
             password_hash=hash_password("adminpass123"),
-            is_admin=True,
             role="admin",
         )
         self.admin_token = issue_token_pair(user=self.admin).access

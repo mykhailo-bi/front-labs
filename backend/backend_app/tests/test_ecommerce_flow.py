@@ -35,7 +35,7 @@ class EcommerceFlowTests:
             username="admin",
             email="admin@example.com",
             password_hash=hash_password("adminpass123"),
-            is_admin=True,
+            role="admin",
         )
         self.admin_token = issue_token_pair(user=self.admin).access
 
@@ -152,7 +152,6 @@ class EcommerceFlowTests:
             username="u_reviews",
             email="u_reviews@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         token = issue_token_pair(user=user).access
 

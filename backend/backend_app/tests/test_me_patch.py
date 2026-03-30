@@ -17,14 +17,12 @@ class MePatchUniquenessTests:
             email="u1@example.com",
             phone="+10000000001",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.user2 = models.User.objects.create(
             username="u2",
             email="u2@example.com",
             phone="+10000000002",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.user1_token = issue_token_pair(user=self.user1).access
 

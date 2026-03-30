@@ -76,12 +76,12 @@ from backend_app.serializers import (
 
 
 class IsAdminOrReadOnly(BasePermission):
-    """Public reads; only admin users (backend_app.User.is_admin) can write."""
+    """Public reads; only users with role=admin can write."""
 
     def has_permission(self, request, view) -> bool:
         if request.method in SAFE_METHODS:
             return True
-        return bool(request.user and getattr(request.user, "is_admin", False))
+        return bool(request.user and getattr(request.user, "role", None) == "admin")
 
 
 class IsAuthenticated(BasePermission):
@@ -91,14 +91,14 @@ class IsAuthenticated(BasePermission):
 
 class IsAdmin(BasePermission):
     def has_permission(self, request, view) -> bool:
-        return bool(request.user and getattr(request.user, "is_admin", False))
+        return bool(request.user and getattr(request.user, "role", None) == "admin")
 
 
 class IsOwnerOrAdmin(BasePermission):
     """Object-level: allow admins; otherwise allow owners (obj.user == request.user)."""
 
     def has_object_permission(self, request, view, obj) -> bool:
-        if request.user and getattr(request.user, "is_admin", False):
+        if request.user and getattr(request.user, "role", None) == "admin":
             return True
         return bool(request.user and getattr(obj, "user_id", None) == request.user.id)
 
@@ -297,8 +297,8 @@ class UserViewSet(viewsets.ModelViewSet):
         except (TypeError, ValueError):
             return Response({"detail": "Invalid user id"}, status=status.HTTP_400_BAD_REQUEST)
 
-        is_admin = bool(request.user and getattr(request.user, "is_admin", False))
-        if not is_admin and request.user.id != user_id:
+        is_role_admin = bool(request.user and getattr(request.user, "role", None) == "admin")
+        if not is_role_admin and request.user.id != user_id:
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         target = models.User.objects.filter(id=user_id).first()
@@ -355,7 +355,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 "phone",
                 "role",
                 "status",
-                "is_admin",
                 "is_email_verified",
             ]
         )
@@ -370,7 +369,6 @@ class UserViewSet(viewsets.ModelViewSet):
                     user.phone or "",
                     user.role,
                     user.status,
-                    int(user.is_admin),
                     int(user.is_email_verified),
                 ]
             )
@@ -431,7 +429,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 "phone": row.get("phone") or None,
                 "role": row.get("role") or "customer",
                 "status": row.get("status") or "active",
-                "is_admin": bool(int(row.get("is_admin") or 0)),
                 "is_email_verified": bool(int(row.get("is_email_verified") or 0)),
                 "password_hash": password_hash,
             }
@@ -485,7 +482,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         # Public catalog only shows active products.
         user = getattr(self.request, "user", None)
-        if not user or not getattr(user, "is_admin", False):
+        if not user or getattr(user, "role", None) != "admin":
             qs = qs.filter(status="active", is_published=True)
 
         category = self.request.query_params.get("category")
@@ -754,7 +751,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user:
             return qs.none()
-        if getattr(user, "is_admin", False):
+        if getattr(user, "role", None) == "admin":
             return qs
         return qs.filter(user=user)
 
@@ -844,7 +841,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         except models.Order.DoesNotExist:
             return Response({"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if not (getattr(request.user, "is_admin", False) or order.user_id == request.user.id):
+        if not (getattr(request.user, "role", None) == "admin" or order.user_id == request.user.id):
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         if not can_transition(from_status=order.status, to_status=OrderStatus.CANCELLED):
@@ -1000,7 +997,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     )
     def invoice(self, request, pk=None):
         order = self.get_object()
-        if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
+        if order.user_id != request.user.id and getattr(request.user, "role", None) != "admin":
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         content = (
@@ -1056,7 +1053,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     )
     def timeline(self, request, pk=None):
         order = self.get_object()
-        if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
+        if order.user_id != request.user.id and getattr(request.user, "role", None) != "admin":
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
         events = models.OrderEvent.objects.filter(order=order).order_by("created_at")
         return Response(OrderEventSerializer(events, many=True).data)
@@ -1077,7 +1074,7 @@ class AddressViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = models.Address.objects.all()
-        if not user or not getattr(user, "is_admin", False):
+        if not user or getattr(user, "role", None) != "admin":
             qs = qs.filter(user=user)
         return qs.order_by("-is_default", "-updated_at")
 

@@ -19,7 +19,7 @@ class UserOrdersRouteAuthTests:
             username="admin2",
             email="admin2@example.com",
             password_hash=hash_password("adminpass123"),
-            is_admin=True,
+            role="admin",
         )
         self.admin_token = issue_token_pair(user=self.admin).access
 
@@ -27,13 +27,11 @@ class UserOrdersRouteAuthTests:
             username="u1_orders",
             email="u1_orders@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.user2 = models.User.objects.create(
             username="u2_orders",
             email="u2_orders@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.user1_token = issue_token_pair(user=self.user1).access
         self.user2_token = issue_token_pair(user=self.user2).access
