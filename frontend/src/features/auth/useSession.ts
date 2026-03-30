@@ -53,13 +53,6 @@ export function useSession() {
                 if (!active) {
                     return
                 }
-                if (currentUser.role !== 'admin') {
-                    applyTokens(null)
-                    const message = 'Admin access required for this dashboard'
-                    setLoginError(message)
-                    notify.error(message)
-                    return
-                }
                 setUser(currentUser)
             })
             .catch((error) => {
@@ -90,10 +83,6 @@ export function useSession() {
                 const nextTokens = await login(username, password)
                 applyTokens(nextTokens)
                 const currentUser = await fetchCurrentUser()
-                if (currentUser.role !== 'admin') {
-                    applyTokens(null)
-                    throw new Error('Admin access required for this dashboard')
-                }
                 setUser(currentUser)
             } catch (error) {
                 const message = parseErrorMessage(error)

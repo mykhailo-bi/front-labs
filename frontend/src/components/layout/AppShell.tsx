@@ -7,7 +7,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -118,10 +117,6 @@ export function AppShell({ user, onLogout }: AppShellProps) {
                                     </SidebarMenuButton>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align='start' side='top' className='w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg p-2'>
-                                    <div className='flex justify-center py-1'>
-                                        <ThemeModeToggle />
-                                    </div>
-                                    <DropdownMenuSeparator />
                                     <DropdownMenuItem variant='destructive' onSelect={() => void onLogout()}>
                                         <LogOut className='size-4' />
                                         <span>Logout</span>
@@ -135,12 +130,13 @@ export function AppShell({ user, onLogout }: AppShellProps) {
             </Sidebar>
 
             <SidebarInset>
-                <header className='flex h-16 shrink-0 items-center transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12'>
-                    <div className='flex items-center gap-2 px-4'>
+                <header className='flex h-16 shrink-0 items-center justify-between gap-3 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12'>
+                    <div className='flex items-center gap-2'>
                         <SidebarTrigger className='-ml-1' />
                         <Separator orientation='vertical' className='mr-1' />
                         <h1 className='text-sm md:text-base'>{currentPageTitle}</h1>
                     </div>
+                    <ThemeModeToggle />
                 </header>
                 <div className='flex-1 p-3 md:p-5'>
                     <Outlet />
