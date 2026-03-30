@@ -60,7 +60,6 @@ export function AppShell({ user, onLogout }: AppShellProps) {
                                     </div>
                                     <div className='grid flex-1 text-left text-sm leading-tight'>
                                         <span className='truncate font-semibold'>Control Center</span>
-                                        <span className='truncate text-xs'>Admin panel</span>
                                     </div>
                                 </Link>
                             </SidebarMenuButton>
