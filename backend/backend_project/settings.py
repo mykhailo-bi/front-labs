@@ -139,7 +139,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     # API quality defaults
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "backend_app.pagination.DefaultPageNumberPagination",
     "PAGE_SIZE": int(os.getenv("API_PAGE_SIZE", "20")),
     "DEFAULT_FILTER_BACKENDS": [
         "rest_framework.filters.SearchFilter",

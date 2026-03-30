@@ -262,6 +262,8 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     # User admin endpoints. Customer registration/login is done via /auth/*.
     permission_classes = [IsAdmin]
+    ordering_fields = ["created_at", "updated_at", "id", "username", "email"]
+    ordering = ["-created_at"]
 
     @extend_schema(
         tags=["orders", "users"],
