@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from urllib.parse import urlparse
 from uuid import uuid4
 import csv
 from io import StringIO
@@ -1124,6 +1125,31 @@ class ImageViewSet(viewsets.ModelViewSet):
     serializer_class = ImageSerializer
     permission_classes = [IsAdmin]
 
+    def _storage_name_from_url(self, image_url: str) -> str | None:
+        media_url = str(getattr(settings, "MEDIA_URL", "/media/") or "/media/")
+        media_prefix = media_url.rstrip("/") + "/"
+
+        parsed = urlparse(image_url)
+        path = parsed.path or image_url
+        normalized_path = path.lstrip("/")
+
+        media_prefix_no_slash = media_prefix.lstrip("/")
+        if normalized_path.startswith(media_prefix_no_slash):
+            return normalized_path[len(media_prefix_no_slash) :]
+
+        return None
+
+    def perform_destroy(self, instance):
+        storage_name = self._storage_name_from_url(instance.url)
+        super().perform_destroy(instance)
+
+        if storage_name:
+            try:
+                default_storage.delete(storage_name)
+            except Exception:
+                # Preserve API success even if storage cleanup fails.
+                pass
+
     @extend_schema(
         tags=["images"],
         summary="Upload image (admin)",
@@ -1801,9 +1827,7 @@ def password_reset_confirm(request):
         models.PasswordResetToken.objects.filter(
             user=user,
             used_at__isnull=True,
-        ).exclude(
-            pk=prt.pk
-        ).update(used_at=timezone.now())
+        ).exclude(pk=prt.pk).update(used_at=timezone.now())
 
     return Response(status=status.HTTP_200_OK)
 
