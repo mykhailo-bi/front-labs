@@ -1,7 +1,31 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
+import { ChevronsUpDown, LayoutDashboard, LogOut, Package, ShoppingCart, Users } from 'lucide-react'
 import { APP_PATHS } from '@/app/paths'
 import { ThemeModeToggle } from '@/components/theme/ThemeModeToggle'
-import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarInset,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarProvider,
+    SidebarRail,
+    SidebarTrigger,
+} from '@/components/ui/sidebar'
 import type { User } from '@/lib/api'
 
 type AppShellProps = {
@@ -9,49 +33,99 @@ type AppShellProps = {
     onLogout: () => Promise<void>
 }
 
-const linkClassName = ({ isActive }: { isActive: boolean }) => {
-    if (isActive) {
-        return 'rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground'
-    }
-    return 'rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-}
-
 export function AppShell({ user, onLogout }: AppShellProps) {
+    const location = useLocation()
+    const navItems = [
+        { title: 'Overview', href: APP_PATHS.OVERVIEW, icon: LayoutDashboard },
+        { title: 'Users', href: APP_PATHS.USERS, icon: Users },
+        { title: 'Products', href: APP_PATHS.PRODUCTS, icon: Package },
+        { title: 'Orders', href: APP_PATHS.ORDERS, icon: ShoppingCart },
+    ]
+    const userInitial = user.username.charAt(0).toUpperCase()
+
     return (
-        <div className='min-h-screen bg-background'>
-            <header className='border-b'>
-                <div className='mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between'>
-                    <div>
-                        <h1 className='font-heading text-2xl font-medium'>Admin Dashboard</h1>
-                        <p className='text-sm text-muted-foreground'>
-                            Signed in as {user.username} ({user.email})
-                        </p>
-                    </div>
-                    <div className='flex items-center gap-2'>
-                        <ThemeModeToggle />
-                        <Button variant='outline' onClick={() => void onLogout()}>
-                            Logout
-                        </Button>
-                    </div>
+        <SidebarProvider>
+            <Sidebar collapsible='icon' variant='inset'>
+                <SidebarHeader>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton asChild size='lg'>
+                                <Link to={APP_PATHS.OVERVIEW}>
+                                    <div className='flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground'>
+                                        <LayoutDashboard className='size-4' />
+                                    </div>
+                                    <div className='grid flex-1 text-left text-sm leading-tight'>
+                                        <span className='truncate font-semibold'>Control Center</span>
+                                        <span className='truncate text-xs'>Admin panel</span>
+                                    </div>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarHeader>
+
+                <SidebarContent>
+                    <SidebarGroup>
+                        <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {navItems.map((item) => (
+                                    <SidebarMenuItem key={item.title}>
+                                        <SidebarMenuButton asChild isActive={location.pathname === item.href} tooltip={item.title}>
+                                            <Link to={item.href}>
+                                                <item.icon />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                </SidebarContent>
+
+                <SidebarFooter>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <SidebarMenuButton
+                                        size='lg'
+                                        className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+                                    >
+                                        <Avatar>
+                                            <AvatarFallback>{userInitial}</AvatarFallback>
+                                        </Avatar>
+                                        <div className='grid flex-1 text-left text-sm leading-tight'>
+                                            <span className='truncate font-semibold'>{user.username}</span>
+                                            <span className='truncate text-xs'>{user.email}</span>
+                                        </div>
+                                        <ChevronsUpDown className='ml-auto size-4' />
+                                    </SidebarMenuButton>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align='start' side='top' className='w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg p-2'>
+                                    <div className='flex justify-center py-1'>
+                                        <ThemeModeToggle />
+                                    </div>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem variant='destructive' onSelect={() => void onLogout()}>
+                                        <LogOut className='size-4' />
+                                        <span>Logout</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarFooter>
+                <SidebarRail />
+            </Sidebar>
+
+            <SidebarInset>
+                <SidebarTrigger className='m-4' />
+                <div className='flex-1 p-3 md:p-5'>
+                    <Outlet />
                 </div>
-            </header>
-            <div className='mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[220px_1fr]'>
-                <nav className='flex gap-2 lg:flex-col'>
-                    <NavLink className={linkClassName} to={APP_PATHS.OVERVIEW} end>
-                        Overview
-                    </NavLink>
-                    <NavLink className={linkClassName} to={APP_PATHS.USERS}>
-                        Users
-                    </NavLink>
-                    <NavLink className={linkClassName} to={APP_PATHS.PRODUCTS}>
-                        Products
-                    </NavLink>
-                    <NavLink className={linkClassName} to={APP_PATHS.ORDERS}>
-                        Orders
-                    </NavLink>
-                </nav>
-                <Outlet />
-            </div>
-        </div>
+            </SidebarInset>
+        </SidebarProvider>
     )
 }

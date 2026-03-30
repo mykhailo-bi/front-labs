@@ -1,18 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
 import { Pager } from '@/components/common/Pager'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Table,
     TableBody,
@@ -21,12 +11,13 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
+import { CreateProductModal } from '@/features/products/components/CreateProductModal'
 import {
     ApiError,
     archiveProduct,
     createProduct,
     fetchProducts,
+    setProductImages,
     updateProduct,
     type PaginatedResponse,
     type Product,
@@ -50,13 +41,6 @@ export function ProductsPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [actionKey, setActionKey] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
-
-    const [name, setName] = useState('')
-    const [sku, setSku] = useState('')
-    const [description, setDescription] = useState('')
-    const [price, setPrice] = useState('0.00')
-    const [stock, setStock] = useState('0')
-    const [isPublished, setIsPublished] = useState(true)
 
     const refresh = useCallback(async () => {
         setIsLoading(true)
@@ -88,32 +72,40 @@ export function ProductsPage() {
         }
     }
 
-    const createNewProduct = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault()
-        const stockQty = Number.parseInt(stock, 10)
-        if (Number.isNaN(stockQty) || stockQty < 0) {
-            setError('Stock quantity must be a non-negative integer')
-            return
-        }
-
-        await applyAction('product:create', async () => {
-            await createProduct({
-                name: name.trim(),
-                sku: sku.trim() || undefined,
-                description: description.trim() || undefined,
-                price,
-                stock_qty: stockQty,
+    const createNewProduct = async (input: {
+        name: string
+        sku?: string
+        description?: string
+        price: string
+        stock_qty: number
+        is_published: boolean
+        image_ids: number[]
+    }) => {
+        setActionKey('product:create')
+        setError(null)
+        try {
+            const createdProduct = await createProduct({
+                name: input.name,
+                sku: input.sku,
+                description: input.description,
+                price: input.price,
+                stock_qty: input.stock_qty,
+                is_published: input.is_published,
                 status: 'active',
-                is_published: isPublished,
                 availability: 'in_stock',
             })
-            setName('')
-            setSku('')
-            setDescription('')
-            setPrice('0.00')
-            setStock('0')
-            setIsPublished(true)
-        })
+
+            if (input.image_ids.length > 0) {
+                await setProductImages(createdProduct.id, input.image_ids)
+            }
+
+            await refresh()
+        } catch (err) {
+            setError(parseErrorMessage(err))
+            throw err
+        } finally {
+            setActionKey(null)
+        }
     }
 
     const totalPages = products ? Math.max(1, Math.ceil(products.count / PAGE_SIZE)) : 1
@@ -130,77 +122,21 @@ export function ProductsPage() {
 
     return (
         <section className='space-y-4'>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Create Product</CardTitle>
-                    <CardDescription>Add inventory directly from admin dashboard</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form className='grid gap-3 md:grid-cols-2' onSubmit={(event) => void createNewProduct(event)}>
-                        <div className='space-y-2'>
-                            <Label htmlFor='product-name'>Name</Label>
-                            <Input id='product-name' value={name} onChange={(event) => setName(event.target.value)} required />
-                        </div>
-                        <div className='space-y-2'>
-                            <Label htmlFor='product-sku'>SKU</Label>
-                            <Input id='product-sku' value={sku} onChange={(event) => setSku(event.target.value)} />
-                        </div>
-                        <div className='space-y-2'>
-                            <Label htmlFor='product-price'>Price</Label>
-                            <Input
-                                id='product-price'
-                                type='number'
-                                min='0'
-                                step='0.01'
-                                value={price}
-                                onChange={(event) => setPrice(event.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className='space-y-2'>
-                            <Label htmlFor='product-stock'>Stock Quantity</Label>
-                            <Input
-                                id='product-stock'
-                                type='number'
-                                min='0'
-                                step='1'
-                                value={stock}
-                                onChange={(event) => setStock(event.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className='space-y-2 md:col-span-2'>
-                            <Label htmlFor='product-description'>Description</Label>
-                            <Textarea
-                                id='product-description'
-                                value={description}
-                                onChange={(event) => setDescription(event.target.value)}
-                            />
-                        </div>
-                        <div className='flex items-center gap-2 md:col-span-2'>
-                            <Checkbox
-                                id='product-published'
-                                checked={isPublished}
-                                onCheckedChange={(checked) => setIsPublished(checked === true)}
-                            />
-                            <Label htmlFor='product-published'>Published</Label>
-                        </div>
-                        <div className='md:col-span-2'>
-                            <Button type='submit' disabled={actionKey === 'product:create'}>
-                                {actionKey === 'product:create' ? 'Creating...' : 'Create Product'}
-                            </Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
+            {error ? <p className='text-sm text-destructive'>{error}</p> : null}
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Product Management</CardTitle>
-                    <CardDescription>Publish, archive, and manage stock</CardDescription>
+                <CardHeader className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+                    <div>
+                        <CardTitle>Product Management</CardTitle>
+                        <CardDescription>Publish, archive, and manage stock</CardDescription>
+                    </div>
+                    <CreateProductModal
+                        isSubmitting={actionKey === 'product:create'}
+                        onValidationError={setError}
+                        onCreate={createNewProduct}
+                    />
                 </CardHeader>
                 <CardContent className='space-y-4'>
-                    {error ? <p className='text-sm text-destructive'>{error}</p> : null}
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -209,6 +145,7 @@ export function ProductsPage() {
                                 <TableHead>Price</TableHead>
                                 <TableHead>Stock</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead>Images</TableHead>
                                 <TableHead className='text-right'>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -230,6 +167,9 @@ export function ProductsPage() {
                                                     {product.is_published ? 'Published' : 'Hidden'}
                                                 </Badge>
                                             </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {(product.image_ids ?? []).length}
                                         </TableCell>
                                         <TableCell className='text-right'>
                                             <div className='flex justify-end gap-2'>
