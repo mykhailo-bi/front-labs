@@ -42,5 +42,5 @@ class ErrorBoundaryInner extends Component<BoundaryProps, BoundaryState> {
 export function AppErrorBoundary({ children }: { children: ReactNode }) {
     const location = useLocation()
 
-    return <ErrorBoundaryInner resetKey={location.pathname} >{children}</ErrorBoundaryInner>
+    return <ErrorBoundaryInner resetKey={location.pathname}>{children}</ErrorBoundaryInner>
 }

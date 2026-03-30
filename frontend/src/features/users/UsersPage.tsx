@@ -245,80 +245,80 @@ export function UsersPage({ currentUserId }: UsersPageProps) {
                 </CardHeader>
                 <CardContent className='space-y-4'>
                     <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>ID</TableHead>
-                            <TableHead>Username</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead className='text-right'>Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {visibleUsers.map((user) => {
-                            const isBusy =
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>ID</TableHead>
+                                <TableHead>Username</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Role</TableHead>
+                                <TableHead className='text-right'>Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {visibleUsers.map((user) => {
+                                const isBusy =
                                 actionKey === `user:edit:${user.id}` ||
                                 actionKey === `user:delete:${user.id}` ||
                                 actionKey === 'user:create'
 
-                            return (
-                                <TableRow key={user.id}>
-                                    <TableCell>{user.id}</TableCell>
-                                    <TableCell>{user.username}</TableCell>
-                                    <TableCell>{user.email}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                                            {user.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{user.role}</TableCell>
-                                    <TableCell className='text-right'>
-                                        <div className='flex justify-end gap-2'>
-                                            <EditUserModal
-                                                user={user}
-                                                currentUserId={currentUserId}
-                                                isSubmitting={isBusy}
-                                                onValidationError={(message) => {
-                                                    setError(message)
-                                                    notify.error(message)
-                                                }}
-                                                onUpdate={updateExistingUser}
-                                                onDelete={deleteExistingUser}
-                                            />
-                                            <Button
-                                                size='sm'
-                                                variant='outline'
-                                                disabled={Boolean(actionKey)}
-                                                onClick={() => void loadUserOrders(user.id)}
-                                            >
-                                                Orders
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )
-                        })}
-                        {visibleUsers.map((user) => {
-                            const userOrders = ordersByUser[user.id]
-                            if (!userOrders?.length) {
-                                return null
-                            }
-                            return (
-                                <TableRow key={`orders-${user.id}`}>
-                                    <TableCell colSpan={6}>
-                                        <div className='rounded-md border bg-muted/20 p-2 text-xs'>
-                                            {userOrders.map((order) => (
-                                                <p key={order.id}>
-                                                    #{order.id} {order.status} {order.currency} {order.total}
-                                                </p>
-                                            ))}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )
-                        })}
-                    </TableBody>
+                                return (
+                                    <TableRow key={user.id}>
+                                        <TableCell>{user.id}</TableCell>
+                                        <TableCell>{user.username}</TableCell>
+                                        <TableCell>{user.email}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                                                {user.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{user.role}</TableCell>
+                                        <TableCell className='text-right'>
+                                            <div className='flex justify-end gap-2'>
+                                                <EditUserModal
+                                                    user={user}
+                                                    currentUserId={currentUserId}
+                                                    isSubmitting={isBusy}
+                                                    onValidationError={(message) => {
+                                                        setError(message)
+                                                        notify.error(message)
+                                                    }}
+                                                    onUpdate={updateExistingUser}
+                                                    onDelete={deleteExistingUser}
+                                                />
+                                                <Button
+                                                    size='sm'
+                                                    variant='outline'
+                                                    disabled={Boolean(actionKey)}
+                                                    onClick={() => void loadUserOrders(user.id)}
+                                                >
+                                                    Orders
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            })}
+                            {visibleUsers.map((user) => {
+                                const userOrders = ordersByUser[user.id]
+                                if (!userOrders?.length) {
+                                    return null
+                                }
+                                return (
+                                    <TableRow key={`orders-${user.id}`}>
+                                        <TableCell colSpan={6}>
+                                            <div className='rounded-md border bg-muted/20 p-2 text-xs'>
+                                                {userOrders.map((order) => (
+                                                    <p key={order.id}>
+                                                        #{order.id} {order.status} {order.currency} {order.total}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            })}
+                        </TableBody>
                     </Table>
                     <Pager
                         page={page}

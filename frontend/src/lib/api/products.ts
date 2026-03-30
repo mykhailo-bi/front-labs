@@ -27,10 +27,10 @@ export async function createProduct(payload: {
 export async function updateProduct(
     id: number,
     payload: Partial<
-        Pick<
-            Product,
-            'name' | 'status' | 'stock_qty' | 'is_published' | 'availability' | 'price' | 'sku' | 'description' | 'category_id'
-        >
+    Pick<
+    Product,
+    'name' | 'status' | 'stock_qty' | 'is_published' | 'availability' | 'price' | 'sku' | 'description' | 'category_id'
+    >
     >,
 ): Promise<Product> {
     return authRequest<Product>(`/products/${id}/`, {

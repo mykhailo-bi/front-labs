@@ -185,29 +185,29 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
 
                 {!isLoadingCurrent
                     ? currentImages.map((image) => {
-                          const isRemoving = removingImageId === image.id
-                          return (
-                              <div key={image.id} className='group relative overflow-hidden rounded-lg border bg-muted/20'>
-                                  <img
-                                      src={resolveImageUrl(image.url)}
-                                      alt={`Product image ${image.id}`}
-                                      className='aspect-square w-full object-cover'
-                                      loading='lazy'
-                                  />
-                                  <div className='absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/55 p-2 text-xs text-white'>
-                                      <span>#{image.id}</span>
-                                      <Button
-                                          size='icon-sm'
-                                          variant='destructive'
-                                          disabled={disabled || isRemoving || isSaving}
-                                          onClick={() => void handleRemove(image.id)}
-                                      >
-                                          {isRemoving ? <Loader2 className='size-3 animate-spin' /> : <Trash2 className='size-3' />}
-                                      </Button>
-                                  </div>
-                              </div>
-                          )
-                      })
+                        const isRemoving = removingImageId === image.id
+                        return (
+                            <div key={image.id} className='group relative overflow-hidden rounded-lg border bg-muted/20'>
+                                <img
+                                    src={resolveImageUrl(image.url)}
+                                    alt={`Product image ${image.id}`}
+                                    className='aspect-square w-full object-cover'
+                                    loading='lazy'
+                                />
+                                <div className='absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/55 p-2 text-xs text-white'>
+                                    <span>#{image.id}</span>
+                                    <Button
+                                        size='icon-sm'
+                                        variant='destructive'
+                                        disabled={disabled || isRemoving || isSaving}
+                                        onClick={() => void handleRemove(image.id)}
+                                    >
+                                        {isRemoving ? <Loader2 className='size-3 animate-spin' /> : <Trash2 className='size-3' />}
+                                    </Button>
+                                </div>
+                            </div>
+                        )
+                    })
                     : null}
 
                 <Dialog open={isChooserOpen} onOpenChange={(nextOpen) => void openChooser(nextOpen)}>

@@ -147,11 +147,9 @@ export function OrdersPage() {
                                                 size='sm'
                                                 variant='outline'
                                                 disabled={isBusy || !canPay}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        await payOrder(order.id, `pay-${order.id}-${Date.now()}`)
-                                                    })
-                                                }
+                                                onClick={() => void applyAction(key, async () => {
+                                                    await payOrder(order.id, `pay-${order.id}-${Date.now()}`)
+                                                })}
                                             >
                                                 Pay
                                             </Button>
@@ -159,11 +157,9 @@ export function OrdersPage() {
                                                 size='sm'
                                                 variant='outline'
                                                 disabled={isBusy || !canPay}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        await markOrderPaid(order.id, `admin-paid-${order.id}-${Date.now()}`)
-                                                    })
-                                                }
+                                                onClick={() => void applyAction(key, async () => {
+                                                    await markOrderPaid(order.id, `admin-paid-${order.id}-${Date.now()}`)
+                                                })}
                                             >
                                                 Mark Paid
                                             </Button>
@@ -171,11 +167,9 @@ export function OrdersPage() {
                                                 size='sm'
                                                 variant='outline'
                                                 disabled={isBusy || !canRefund}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        await refundOrder(order.id, 'Approved by admin dashboard')
-                                                    })
-                                                }
+                                                onClick={() => void applyAction(key, async () => {
+                                                    await refundOrder(order.id, 'Approved by admin dashboard')
+                                                })}
                                             >
                                                 Refund Req
                                             </Button>
@@ -183,11 +177,9 @@ export function OrdersPage() {
                                                 size='sm'
                                                 variant='outline'
                                                 disabled={isBusy || !canRefund}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        await approveOrderRefund(order.id)
-                                                    })
-                                                }
+                                                onClick={() => void applyAction(key, async () => {
+                                                    await approveOrderRefund(order.id)
+                                                })}
                                             >
                                                 Refund OK
                                             </Button>
@@ -195,12 +187,10 @@ export function OrdersPage() {
                                                 size='sm'
                                                 variant='outline'
                                                 disabled={isBusy}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        const payload = await fetchOrderTimeline(order.id)
-                                                        setTimelineByOrder((prev) => ({ ...prev, [order.id]: payload }))
-                                                    })
-                                                }
+                                                onClick={() => void applyAction(key, async () => {
+                                                    const payload = await fetchOrderTimeline(order.id)
+                                                    setTimelineByOrder((prev) => ({ ...prev, [order.id]: payload }))
+                                                })}
                                             >
                                                 Timeline
                                             </Button>
@@ -208,12 +198,10 @@ export function OrdersPage() {
                                                 size='sm'
                                                 variant='outline'
                                                 disabled={isBusy}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        const payload = await fetchOrderInvoice(order.id)
-                                                        setInvoiceByOrder((prev) => ({ ...prev, [order.id]: payload.invoice }))
-                                                    })
-                                                }
+                                                onClick={() => void applyAction(key, async () => {
+                                                    const payload = await fetchOrderInvoice(order.id)
+                                                    setInvoiceByOrder((prev) => ({ ...prev, [order.id]: payload.invoice }))
+                                                })}
                                             >
                                                 Invoice
                                             </Button>
@@ -221,11 +209,9 @@ export function OrdersPage() {
                                                 size='sm'
                                                 variant='outline'
                                                 disabled={isBusy || !canShip}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        await shipOrder(order.id)
-                                                    })
-                                                }
+                                                onClick={() => void applyAction(key, async () => {
+                                                    await shipOrder(order.id)
+                                                })}
                                             >
                                                 Ship
                                             </Button>
@@ -233,11 +219,9 @@ export function OrdersPage() {
                                                 size='sm'
                                                 variant='outline'
                                                 disabled={isBusy || !canDeliver}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        await deliverOrder(order.id)
-                                                    })
-                                                }
+                                                onClick={() => void applyAction(key, async () => {
+                                                    await deliverOrder(order.id)
+                                                })}
                                             >
                                                 Deliver
                                             </Button>
@@ -245,11 +229,9 @@ export function OrdersPage() {
                                                 size='sm'
                                                 variant='outline'
                                                 disabled={isBusy || !canCancel}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        await cancelOrder(order.id)
-                                                    })
-                                                }
+                                                onClick={() => void applyAction(key, async () => {
+                                                    await cancelOrder(order.id)
+                                                })}
                                             >
                                                 Cancel
                                             </Button>

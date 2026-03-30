@@ -16,6 +16,7 @@ export type PaginatedResponse<T> = {
 
 export class ApiError extends Error {
     status: number
+
     details: unknown
 
     constructor(message: string, status: number, details: unknown) {
