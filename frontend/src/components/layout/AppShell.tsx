@@ -50,12 +50,16 @@ export function AppShell({ user, onLogout }: AppShellProps) {
     return (
         <SidebarProvider>
             <Sidebar collapsible='icon' variant='inset'>
-                <SidebarHeader>
+                <SidebarHeader className='border-b border-sidebar-border/60 p-2'>
                     <SidebarMenu>
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild size='lg'>
+                            <SidebarMenuButton
+                                asChild
+                                size='lg'
+                                className='rounded-lg data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+                            >
                                 <Link to={APP_PATHS.OVERVIEW}>
-                                    <div className='flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground'>
+                                    <div className='flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-sm'>
                                         <LayoutDashboard className='size-4' />
                                     </div>
                                     <div className='grid flex-1 text-left text-sm leading-tight'>
@@ -68,17 +72,17 @@ export function AppShell({ user, onLogout }: AppShellProps) {
                 </SidebarHeader>
 
                 <SidebarContent>
-                    <SidebarGroup>
-                        <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+                    <SidebarGroup className='pt-3'>
+                        <SidebarGroupLabel className='px-3 text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/60'>Navigation</SidebarGroupLabel>
                         <SidebarGroupContent>
-                            <SidebarMenu className='px-2 gap-1'>
+                            <SidebarMenu className='gap-1.5'>
                                 {navItems.map((item) => (
                                     <SidebarMenuItem key={item.title}>
                                         <SidebarMenuButton
                                             asChild
                                             isActive={location.pathname === item.href}
                                             tooltip={item.title}
-                                            className='px-3 py-2'
+                                            className='h-9 rounded-lg px-3 font-medium transition-all data-[active=true]:shadow-sm'
                                         >
                                             <Link to={item.href}>
                                                 <item.icon />
@@ -92,14 +96,14 @@ export function AppShell({ user, onLogout }: AppShellProps) {
                     </SidebarGroup>
                 </SidebarContent>
 
-                <SidebarFooter>
+                <SidebarFooter className='border-t border-sidebar-border/60 p-2'>
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <SidebarMenuButton
                                         size='lg'
-                                        className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+                                        className='rounded-lg data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
                                     >
                                         <Avatar>
                                             <AvatarFallback>{userInitial}</AvatarFallback>
