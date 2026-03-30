@@ -546,7 +546,18 @@ class SavedItemSerializer(serializers.ModelSerializer):
 class ImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Image
-        fields = ["id", "url", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "url",
+            "alt_text",
+            "title",
+            "caption",
+            "filename",
+            "description",
+            "aria_label",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 

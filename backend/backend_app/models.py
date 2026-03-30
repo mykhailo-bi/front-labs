@@ -30,6 +30,12 @@ class Cart(models.Model):
 
 class Image(models.Model):
     url = models.CharField(max_length=1024)
+    alt_text = models.CharField(max_length=255, blank=True, null=True)
+    title = models.CharField(max_length=255, blank=True, null=True)
+    caption = models.CharField(max_length=512, blank=True, null=True)
+    filename = models.CharField(max_length=255, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    aria_label = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

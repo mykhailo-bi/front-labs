@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from pathlib import Path
 from urllib.parse import urlparse
 from uuid import uuid4
 import csv
@@ -1215,7 +1216,10 @@ class ImageViewSet(viewsets.ModelViewSet):
         relative_url = f"{media_url.rstrip('/')}/{saved_name.lstrip('/')}"
 
         # Store relative URL; frontend can prefix with API host if needed.
-        img = models.Image.objects.create(url=relative_url)
+        original_name = (getattr(upload, "name", "") or "").strip()
+        filename = Path(original_name).name if original_name else Path(saved_name).name
+
+        img = models.Image.objects.create(url=relative_url, filename=filename)
         return Response(ImageSerializer(img, context={"request": request}).data, status=201)
 
 
@@ -1827,7 +1831,9 @@ def password_reset_confirm(request):
         models.PasswordResetToken.objects.filter(
             user=user,
             used_at__isnull=True,
-        ).exclude(pk=prt.pk).update(used_at=timezone.now())
+        ).exclude(
+            pk=prt.pk
+        ).update(used_at=timezone.now())
 
     return Response(status=status.HTTP_200_OK)
 
