@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
 import {
     Card,
     CardContent,
@@ -153,11 +154,11 @@ export function OverviewPage() {
                     </Button>
                 </CardHeader>
                 <CardContent className='space-y-4'>
-                    <div className='flex gap-2'>
+                    <ButtonGroup aria-label='Overview time range'>
                         <Button size='sm' variant={timeRange === '7d' ? 'default' : 'outline'} onClick={() => setTimeRange('7d')}>7d</Button>
                         <Button size='sm' variant={timeRange === '30d' ? 'default' : 'outline'} onClick={() => setTimeRange('30d')}>30d</Button>
                         <Button size='sm' variant={timeRange === '90d' ? 'default' : 'outline'} onClick={() => setTimeRange('90d')}>90d</Button>
-                    </div>
+                    </ButtonGroup>
                     {error ? <p className='text-sm text-destructive'>{error}</p> : null}
                     <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
                         {metrics.map((item) => (
