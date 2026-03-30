@@ -1,23 +1,29 @@
+import path from 'path'
+import babel from '@rolldown/plugin-babel'
+import tailwindcss from '@tailwindcss/vite'
+import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
-    plugins: [react()],
+    plugins: [
+        tailwindcss(),
+        react(),
+        babel({ presets: [reactCompilerPreset()] }),
+    ],
+    server: {
+        host: 'localhost',
+        port: 8000,
+        strictPort: true,
+        proxy: {
+            '/api': {
+                target: 'http://127.0.0.1:9000',
+                changeOrigin: true,
+            },
+        },
+    },
     resolve: {
         alias: {
-            '@': fileURLToPath(new URL('./src', import.meta.url)),
+            '@': path.resolve(__dirname, './src'),
         },
-    },
-    server: {
-        host: '0.0.0.0',
-        port: 8000,
-        proxy: {
-            '/api': 'http://localhost:8000',
-        },
-    },
-    preview: {
-        host: '0.0.0.0',
-        port: 8000,
     },
 })

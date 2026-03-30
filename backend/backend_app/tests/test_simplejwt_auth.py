@@ -78,7 +78,8 @@ class SimpleJWTAuthenticationTests:
                 self.auth.get_user(token)
 
         with mock.patch(
-            "backend_app.auth.models.User.objects.get", side_effect=models.User.DoesNotExist
+            "backend_app.auth.models.User.objects.get",
+            side_effect=models.User.DoesNotExist,
         ):
             with pytest.raises(drf_exc.AuthenticationFailed):
                 self.auth.get_user(token)

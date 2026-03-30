@@ -62,10 +62,16 @@ class ReportsAndHealthTests:
             is_published=True,
         )
         models.Order.objects.create(
-            user=user, status=OrderStatus.PAID, total=Decimal("10.00"), subtotal=Decimal("10.00")
+            user=user,
+            status=OrderStatus.PAID,
+            total=Decimal("10.00"),
+            subtotal=Decimal("10.00"),
         )
         models.Order.objects.create(
-            user=user, status=OrderStatus.PLACED, total=Decimal("5.00"), subtotal=Decimal("5.00")
+            user=user,
+            status=OrderStatus.PLACED,
+            total=Decimal("5.00"),
+            subtotal=Decimal("5.00"),
         )
 
         res = self.client.get("/api/v1/reports/aggregate/", **self._auth_admin())

@@ -12,7 +12,10 @@ from backend_app.security import hash_password, verify_password
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, allow_blank=False)
     avatar_id = serializers.PrimaryKeyRelatedField(
-        source="avatar", queryset=models.Image.objects.all(), allow_null=True, required=False
+        source="avatar",
+        queryset=models.Image.objects.all(),
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
@@ -180,7 +183,10 @@ class TokenRefreshSerializer(serializers.Serializer):
 class ProductSerializer(serializers.ModelSerializer):
     image_ids = serializers.PrimaryKeyRelatedField(source="images", many=True, read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
-        source="category", queryset=models.Category.objects.all(), allow_null=True, required=False
+        source="category",
+        queryset=models.Category.objects.all(),
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
@@ -202,7 +208,13 @@ class ProductSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "reserved_qty", "image_ids", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "reserved_qty",
+            "image_ids",
+            "created_at",
+            "updated_at",
+        ]
 
     def validate_sku(self, value):
         if value is None or value == "":
@@ -371,7 +383,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 class CategorySerializer(serializers.ModelSerializer):
     parent_id = serializers.PrimaryKeyRelatedField(
-        source="parent", queryset=models.Category.objects.all(), allow_null=True, required=False
+        source="parent",
+        queryset=models.Category.objects.all(),
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
@@ -656,7 +671,15 @@ class RefundRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.RefundRequest
-        fields = ["id", "order_id", "user_id", "reason", "status", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "order_id",
+            "user_id",
+            "reason",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "status", "created_at", "updated_at", "user_id"]
 
 
@@ -680,7 +703,15 @@ class CustomerMarkPaidSerializer(serializers.Serializer):
 class UserInviteSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.UserInvite
-        fields = ["id", "email", "role", "token", "expires_at", "accepted_at", "created_at"]
+        fields = [
+            "id",
+            "email",
+            "role",
+            "token",
+            "expires_at",
+            "accepted_at",
+            "created_at",
+        ]
         read_only_fields = ["id", "token", "accepted_at", "created_at"]
 
 

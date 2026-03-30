@@ -27,7 +27,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("reason", models.TextField(blank=True, null=True)),
@@ -37,13 +40,15 @@ class Migration(migrations.Migration):
                 (
                     "order",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT, to="backend_app.order"
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="backend_app.order",
                     ),
                 ),
                 (
                     "user",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.PROTECT, to="backend_app.user"
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="backend_app.user",
                     ),
                 ),
             ],
@@ -58,7 +63,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("event_type", models.CharField(max_length=32)),
@@ -67,7 +75,8 @@ class Migration(migrations.Migration):
                 (
                     "order",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="backend_app.order"
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="backend_app.order",
                     ),
                 ),
             ],
@@ -75,7 +84,8 @@ class Migration(migrations.Migration):
                 "db_table": "order_event",
                 "indexes": [
                     models.Index(
-                        fields=["order", "created_at"], name="order_event_order_created_idx"
+                        fields=["order", "created_at"],
+                        name="order_event_order_created_idx",
                     )
                 ],
             },

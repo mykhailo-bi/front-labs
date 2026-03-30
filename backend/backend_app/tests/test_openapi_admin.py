@@ -18,28 +18,50 @@ class OpenApiAndAdminTests:
         site = admin_module.admin_site
 
         admin_user = type(
-            "U", (), {"is_admin": True, "is_staff": False, "is_superuser": False, "is_active": True}
+            "U",
+            (),
+            {
+                "is_admin": True,
+                "is_staff": False,
+                "is_superuser": False,
+                "is_active": True,
+            },
         )()
         assert site.has_permission(request=type("R", (), {"user": admin_user})())
 
         staff_user = type(
             "U",
             (),
-            {"is_admin": False, "is_staff": True, "is_superuser": False, "is_active": True},
+            {
+                "is_admin": False,
+                "is_staff": True,
+                "is_superuser": False,
+                "is_active": True,
+            },
         )()
         assert site.has_permission(request=type("R", (), {"user": staff_user})())
 
         superuser = type(
             "U",
             (),
-            {"is_admin": False, "is_staff": False, "is_superuser": True, "is_active": True},
+            {
+                "is_admin": False,
+                "is_staff": False,
+                "is_superuser": True,
+                "is_active": True,
+            },
         )()
         assert site.has_permission(request=type("R", (), {"user": superuser})())
 
         inactive = type(
             "U",
             (),
-            {"is_admin": False, "is_staff": True, "is_superuser": False, "is_active": False},
+            {
+                "is_admin": False,
+                "is_staff": True,
+                "is_superuser": False,
+                "is_active": False,
+            },
         )()
         assert not site.has_permission(request=type("R", (), {"user": inactive})())
 

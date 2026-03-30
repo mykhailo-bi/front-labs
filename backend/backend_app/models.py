@@ -160,7 +160,8 @@ class Product(models.Model):
             CheckConstraint(check=Q(stock_qty__gte=0), name="product_stock_qty_gte_0"),
             CheckConstraint(check=Q(reserved_qty__gte=0), name="product_reserved_qty_gte_0"),
             CheckConstraint(
-                check=Q(reserved_qty__lte=models.F("stock_qty")), name="product_reserved_le_stock"
+                check=Q(reserved_qty__lte=models.F("stock_qty")),
+                name="product_reserved_le_stock",
             ),
         ]
         indexes = [

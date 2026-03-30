@@ -13,7 +13,12 @@ from django.db.utils import IntegrityError
 from django.utils import timezone
 
 from rest_framework import routers, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
+from rest_framework.decorators import (
+    action,
+    api_view,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import SAFE_METHODS, BasePermission
@@ -272,7 +277,12 @@ class UserViewSet(viewsets.ModelViewSet):
             404: OpenApiResponse(description="User not found"),
         },
     )
-    @action(detail=True, methods=["get"], url_path="orders", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="orders",
+        permission_classes=[IsAuthenticated],
+    )
     def orders(self, request, pk=None):
         """List orders for a specific user.
 
@@ -402,7 +412,8 @@ class UserViewSet(viewsets.ModelViewSet):
         for idx, row in enumerate(reader, start=1):
             if max_rows >= 0 and idx > max_rows:
                 return Response(
-                    {"detail": "CSV row limit exceeded."}, status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "CSV row limit exceeded."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             email = (row.get("email") or "").strip()
             if not email:
@@ -430,7 +441,11 @@ class UserViewSet(viewsets.ModelViewSet):
                 updated += int(not created_flag)
             except IntegrityError:
                 errors.append(
-                    {"row": idx, "email": email, "detail": "Unique constraint violation."}
+                    {
+                        "row": idx,
+                        "email": email,
+                        "detail": "Unique constraint violation.",
+                    }
                 )
 
         if errors:
@@ -581,7 +596,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         for idx, row in enumerate(reader, start=1):
             if max_rows >= 0 and idx > max_rows:
                 return Response(
-                    {"detail": "CSV row limit exceeded."}, status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "CSV row limit exceeded."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             sku = (row.get("sku") or "").strip() or None
             defaults = {
@@ -633,7 +649,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         request=SetProductImagesSerializer,
         responses={200: ProductSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="images/set", permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="images/set",
+        permission_classes=[IsAdmin],
+    )
     def set_images(self, request, pk=None):
         """Replace all product image associations.
 
@@ -645,7 +666,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         image_ids = request.data.get("image_ids")
         if not isinstance(image_ids, list):
             return Response(
-                {"image_ids": "Must be a list of IDs."}, status=status.HTTP_400_BAD_REQUEST
+                {"image_ids": "Must be a list of IDs."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Normalize to ints and reject duplicates up-front to avoid DB unique violations.
@@ -666,7 +688,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         images = list(models.Image.objects.filter(id__in=image_ids_int))
         if len(images) != len(set(image_ids_int)):
             return Response(
-                {"image_ids": "One or more images not found."}, status=status.HTTP_400_BAD_REQUEST
+                {"image_ids": "One or more images not found."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         with transaction.atomic():
@@ -683,7 +706,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         request=ProductImageAltTextSerializer,
         responses={200: ProductSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="images/alt-text", permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="images/alt-text",
+        permission_classes=[IsAdmin],
+    )
     def set_image_alt_text(self, request, pk=None):
         product = self.get_object()
         serializer = ProductImageAltTextSerializer(data=request.data)
@@ -695,7 +723,8 @@ class ProductViewSet(viewsets.ModelViewSet):
             product_image = models.ProductImage.objects.get(product=product, image_id=image_id)
         except models.ProductImage.DoesNotExist:
             return Response(
-                {"detail": "Image not associated with product."}, status=status.HTTP_404_NOT_FOUND
+                {"detail": "Image not associated with product."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         product_image.alt_text = alt_text
@@ -775,7 +804,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         request=None,
         responses={200: OrderSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="refund-approve", permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="refund-approve",
+        permission_classes=[IsAdmin],
+    )
     def admin_refund(self, request, pk=None):
         order = self.get_object()
         models.OrderEvent.objects.create(order=order, event_type="refund_approved")
@@ -791,9 +825,17 @@ class OrderViewSet(viewsets.ModelViewSet):
         tags=["orders"],
         summary="Cancel order (customer)",
         description="Allow a customer to cancel their own placed order before it is paid/shipped.",
-        responses={200: OrderSerializer, 400: OpenApiResponse(description="Invalid state")},
+        responses={
+            200: OrderSerializer,
+            400: OpenApiResponse(description="Invalid state"),
+        },
     )
-    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="cancel",
+        permission_classes=[IsAuthenticated],
+    )
     def cancel(self, request, pk=None):
         try:
             order = models.Order.objects.get(pk=pk)
@@ -805,7 +847,8 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         if not can_transition(from_status=order.status, to_status=OrderStatus.CANCELLED):
             return Response(
-                {"detail": "Cannot cancel in current status"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Cannot cancel in current status"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if order.status == OrderStatus.CANCELLED:
@@ -849,7 +892,12 @@ class OrderViewSet(viewsets.ModelViewSet):
             404: OpenApiResponse(description="Order not found"),
         },
     )
-    @action(detail=True, methods=["post"], url_path="pay", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="pay",
+        permission_classes=[IsAuthenticated],
+    )
     def pay(self, request, pk=None):
         serializer = CustomerMarkPaidSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -942,7 +990,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         description="Return a minimal text invoice for the order.",
         responses={200: OpenApiResponse(description="Invoice text")},
     )
-    @action(detail=True, methods=["get"], url_path="invoice", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="invoice",
+        permission_classes=[IsAuthenticated],
+    )
     def invoice(self, request, pk=None):
         order = self.get_object()
         if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
@@ -965,7 +1018,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         request=RefundRequestSerializer,
         responses={201: RefundRequestSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="refund", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="refund",
+        permission_classes=[IsAuthenticated],
+    )
     def refund(self, request, pk=None):
         order = self.get_object()
         if order.user_id != request.user.id:
@@ -988,7 +1046,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         summary="List order timeline",
         responses={200: OrderEventSerializer(many=True)},
     )
-    @action(detail=True, methods=["get"], url_path="timeline", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="timeline",
+        permission_classes=[IsAuthenticated],
+    )
     def timeline(self, request, pk=None):
         order = self.get_object()
         if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
@@ -1240,7 +1303,8 @@ def change_password(request):
     # Verify current password
     if not verify_password(current_password, request.user.password_hash):
         return Response(
-            {"detail": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST
+            {"detail": "Current password is incorrect"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     if len(new_password) < 8:
@@ -1722,7 +1786,8 @@ def password_reset_confirm(request):
         )
         if not prt:
             return Response(
-                {"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Invalid or expired token"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         user = prt.user
@@ -1804,7 +1869,8 @@ def email_verification_confirm(request):
         )
         if not evt:
             return Response(
-                {"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Invalid or expired token"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         user = evt.user

@@ -30,7 +30,10 @@ class CsvImportLimitTests:
         content = "email\n" + ("a" * 20)
         upload = SimpleUploadedFile("users.csv", content.encode("utf-8"), content_type="text/csv")
         res = self.client.post(
-            "/api/v1/users/import/", {"file": upload}, format="multipart", **self._auth()
+            "/api/v1/users/import/",
+            {"file": upload},
+            format="multipart",
+            **self._auth(),
         )
         assert res.status_code == 400
         assert "detail" in res.data
@@ -42,7 +45,10 @@ class CsvImportLimitTests:
             "products.csv", content.encode("utf-8"), content_type="text/csv"
         )
         res = self.client.post(
-            "/api/v1/products/import/", {"file": upload}, format="multipart", **self._auth()
+            "/api/v1/products/import/",
+            {"file": upload},
+            format="multipart",
+            **self._auth(),
         )
         assert res.status_code == 400
         assert "detail" in res.data
@@ -56,7 +62,10 @@ class CsvImportLimitTests:
         content = "email,username,password,is_admin,is_email_verified\nuser1@example.com,u1,,1,0\nuser1@example.com,u1,,0,0\n"
         upload = SimpleUploadedFile("users.csv", content.encode("utf-8"), content_type="text/csv")
         res = self.client.post(
-            "/api/v1/users/import/", {"file": upload}, format="multipart", **self._auth()
+            "/api/v1/users/import/",
+            {"file": upload},
+            format="multipart",
+            **self._auth(),
         )
         # First row creates, second triggers integrity error path; API still 200 with counts.
         assert res.status_code == 200
@@ -76,7 +85,10 @@ class CsvImportLimitTests:
             "products.csv", content.encode("utf-8"), content_type="text/csv"
         )
         res = self.client.post(
-            "/api/v1/products/import/", {"file": upload}, format="multipart", **self._auth()
+            "/api/v1/products/import/",
+            {"file": upload},
+            format="multipart",
+            **self._auth(),
         )
         assert res.status_code == 200
         assert res.data["created"] == 1
@@ -88,7 +100,10 @@ class CsvImportLimitTests:
             "products.csv", content.encode("utf-8"), content_type="text/csv"
         )
         res = self.client.post(
-            "/api/v1/products/import/", {"file": upload}, format="multipart", **self._auth()
+            "/api/v1/products/import/",
+            {"file": upload},
+            format="multipart",
+            **self._auth(),
         )
         assert res.status_code == 200
         assert res.data["created"] == 1

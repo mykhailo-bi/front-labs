@@ -121,7 +121,8 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="product",
             constraint=models.CheckConstraint(
-                check=Q(reserved_qty__lte=F("stock_qty")), name="product_reserved_le_stock"
+                check=Q(reserved_qty__lte=F("stock_qty")),
+                name="product_reserved_le_stock",
             ),
         ),
         migrations.AddConstraint(
