@@ -144,7 +144,7 @@ export function ProductsPage() {
                             />
                         </div>
                         <div className='space-y-2'>
-                            <Label htmlFor='product-stock'>Stock Qty</Label>
+                            <Label htmlFor='product-stock'>Stock Quantity</Label>
                             <Input
                                 id='product-stock'
                                 type='number'
