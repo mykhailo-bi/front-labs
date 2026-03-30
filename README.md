@@ -135,21 +135,59 @@ The script can create:
 
 The frontend is a React SPA in `frontend/` and is intended to run against the Django backend during development.
 
+### Framework and architecture
+
+- Framework: React + TypeScript + Vite
+- Routing: `react-router-dom` with routes for `/overview`, `/users`, `/products`, `/orders`, `/login`
+- API integration: REST calls to backend endpoints under `/api/v1/*`
+- Data exchange format: JSON (`Accept: application/json`, `Content-Type: application/json`)
+
 ### Frontend quick start
+
+1. Install dependencies:
 
 ```bash
 cd frontend
 npm install
+```
+
+2. Start development server:
+
+```bash
 npm run dev
 ```
 
-Linting:
+3. Run lint:
 
 ```bash
 npm run lint
 ```
 
-The frontend dev server runs on `http://localhost:3000` according to the current README setup, and proxies `/api` requests to the backend. Override the backend target with `VITE_API_URL` if needed.
+The SPA runs on `http://localhost:8000`.
+
+Vite proxies `/api` to `http://127.0.0.1:9000`, so local backend and frontend work together without CORS setup.
+
+To override backend URL directly, create `frontend/.env`:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:9000/api/v1
+```
+
+### Refresh behavior for deep links
+
+`BrowserRouter` is used for SPA routing. Vite development server serves the SPA entry for unknown routes, so direct refresh on paths like `/users` keeps the same page visible.
+
+### Browser support
+
+- Google Chrome (latest stable)
+- Mozilla Firefox (latest stable)
+
+### Quality gates
+
+- No console errors or logs during normal flow
+- Linting via `npm run lint`
+- Production build via `npm run build`
+- Code is split into focused files/components to keep responsibilities isolated
 
 ## Notes
 
