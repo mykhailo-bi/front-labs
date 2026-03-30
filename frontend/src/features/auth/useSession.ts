@@ -10,6 +10,7 @@ import {
     type Tokens,
     type User,
 } from '@/lib/api'
+import { notify } from '@/lib/notify'
 
 function parseErrorMessage(error: unknown): string {
     if (error instanceof ApiError) {
@@ -54,7 +55,9 @@ export function useSession() {
                 }
                 if (!currentUser.is_admin) {
                     applyTokens(null)
-                    setLoginError('Admin access required for this dashboard')
+                    const message = 'Admin access required for this dashboard'
+                    setLoginError(message)
+                    notify.error(message)
                     return
                 }
                 setUser(currentUser)
@@ -64,7 +67,9 @@ export function useSession() {
                     return
                 }
                 applyTokens(null)
-                setLoginError(parseErrorMessage(error))
+                const message = parseErrorMessage(error)
+                setLoginError(message)
+                notify.error(message)
             })
             .finally(() => {
                 if (active) {
@@ -91,7 +96,9 @@ export function useSession() {
                 }
                 setUser(currentUser)
             } catch (error) {
-                setLoginError(parseErrorMessage(error))
+                const message = parseErrorMessage(error)
+                setLoginError(message)
+                notify.error(message)
                 throw error
             } finally {
                 setIsLoginLoading(false)

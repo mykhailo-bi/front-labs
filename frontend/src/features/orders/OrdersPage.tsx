@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
@@ -26,6 +25,7 @@ import {
     type Order,
     type PaginatedResponse,
 } from '@/lib/api'
+import { notify } from '@/lib/notify'
 
 function parseErrorMessage(error: unknown): string {
     if (error instanceof ApiError) {
@@ -53,7 +53,9 @@ export function OrdersPage() {
             const nextOrders = await fetchOrders(page, PAGE_SIZE)
             setOrders(nextOrders)
         } catch (err) {
-            setError(parseErrorMessage(err))
+            const message = parseErrorMessage(err)
+            setError(message)
+            notify.error(message)
         } finally {
             setIsLoading(false)
         }
@@ -69,8 +71,11 @@ export function OrdersPage() {
         try {
             await callback()
             await refresh()
+            notify.success('Order updated successfully')
         } catch (err) {
-            setError(parseErrorMessage(err))
+            const message = parseErrorMessage(err)
+            setError(message)
+            notify.error(message)
         } finally {
             setActionKey(null)
         }
@@ -91,8 +96,7 @@ export function OrdersPage() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Order Operations</CardTitle>
-                <CardDescription>Ship, deliver, and cancel orders</CardDescription>
+                <CardTitle>Orders</CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
                 {error ? <p className='text-sm text-destructive'>{error}</p> : null}

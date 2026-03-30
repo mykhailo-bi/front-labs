@@ -8,6 +8,7 @@ import { OrdersPage } from '@/features/orders/OrdersPage'
 import { OverviewPage } from '@/features/overview/OverviewPage'
 import { ProductsPage } from '@/features/products/ProductsPage'
 import { UsersPage } from '@/features/users/UsersPage'
+import { notify } from '@/lib/notify'
 
 export function AppRoutes() {
     const session = useSession()
@@ -17,6 +18,7 @@ export function AppRoutes() {
     const handleLogin = async (username: string, password: string) => {
         try {
             await session.signIn(username, password)
+            notify.success('Signed in successfully')
             navigate(APP_PATHS.OVERVIEW, { replace: true })
         } catch {
             return
@@ -25,6 +27,7 @@ export function AppRoutes() {
 
     const handleLogout = async () => {
         await session.signOut()
+        notify.success('Signed out successfully')
         navigate(APP_PATHS.LOGIN, { replace: true })
     }
 

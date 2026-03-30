@@ -27,6 +27,7 @@ import {
     SidebarTrigger,
 } from '@/components/ui/sidebar'
 import type { User } from '@/lib/api'
+import { Separator } from '@/components/ui/separator'
 
 type AppShellProps = {
     user: User
@@ -41,6 +42,9 @@ export function AppShell({ user, onLogout }: AppShellProps) {
         { title: 'Products', href: APP_PATHS.PRODUCTS, icon: Package },
         { title: 'Orders', href: APP_PATHS.ORDERS, icon: ShoppingCart },
     ]
+    const currentPageTitle =
+        navItems.find((item) => location.pathname === item.href || location.pathname.startsWith(`${item.href}/`))?.title ??
+        'Dashboard'
     const userInitial = user.username.charAt(0).toUpperCase()
 
     return (
@@ -121,7 +125,13 @@ export function AppShell({ user, onLogout }: AppShellProps) {
             </Sidebar>
 
             <SidebarInset>
-                <SidebarTrigger className='m-4' />
+                <header className='flex h-16 shrink-0 items-center transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12'>
+                    <div className='flex items-center gap-2 px-4'>
+                        <SidebarTrigger className='-ml-1' />
+                        <Separator orientation='vertical' className='mr-1' />
+                        <h1 className='text-sm md:text-base'>{currentPageTitle}</h1>
+                    </div>
+                </header>
                 <div className='flex-1 p-3 md:p-5'>
                     <Outlet />
                 </div>

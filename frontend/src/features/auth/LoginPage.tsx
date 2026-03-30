@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { notify } from '@/lib/notify'
 
 type LoginPageProps = {
     onLogin: (username: string, password: string) => Promise<void>
@@ -21,8 +22,22 @@ export function LoginPage({ onLogin, isLoading, error }: LoginPageProps) {
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
 
+    useEffect(() => {
+        if (error) {
+            notify.error(error)
+        }
+    }, [error])
+
     const submit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
+        if (!username.trim()) {
+            notify.error('Username or email is required')
+            return
+        }
+        if (!password) {
+            notify.error('Password is required')
+            return
+        }
         await onLogin(username.trim(), password)
     }
 

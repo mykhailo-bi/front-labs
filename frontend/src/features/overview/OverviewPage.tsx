@@ -9,6 +9,7 @@ import {
     CardTitle,
 } from '@/components/ui/card'
 import { ApiError, fetchAggregateReport, type AggregateReport } from '@/lib/api'
+import { notify } from '@/lib/notify'
 
 function parseErrorMessage(error: unknown): string {
     if (error instanceof ApiError) {
@@ -25,14 +26,19 @@ export function OverviewPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
-    const refresh = useCallback(async () => {
+    const refresh = useCallback(async (showSuccessToast = false) => {
         setIsLoading(true)
         setError(null)
         try {
             const nextReport = await fetchAggregateReport()
             setReport(nextReport)
+            if (showSuccessToast) {
+                notify.success('Overview refreshed')
+            }
         } catch (err) {
-            setError(parseErrorMessage(err))
+            const message = parseErrorMessage(err)
+            setError(message)
+            notify.error(message)
         } finally {
             setIsLoading(false)
         }
@@ -65,7 +71,7 @@ export function OverviewPage() {
                     <CardDescription>Live totals from backend aggregate report</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button variant='outline' onClick={() => void refresh()} disabled={isLoading}>
+                    <Button variant='outline' onClick={() => void refresh(true)} disabled={isLoading}>
                         {isLoading ? 'Loading...' : 'Refresh'}
                     </Button>
                     {error ? <p className='mt-3 text-sm text-destructive'>{error}</p> : null}

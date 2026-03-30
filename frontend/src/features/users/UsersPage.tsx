@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
@@ -18,6 +17,7 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { ApiError, fetchUsers, updateUser, type PaginatedResponse, type User } from '@/lib/api'
+import { notify } from '@/lib/notify'
 
 function parseErrorMessage(error: unknown): string {
     if (error instanceof ApiError) {
@@ -45,7 +45,9 @@ export function UsersPage() {
             const nextUsers = await fetchUsers(page, PAGE_SIZE)
             setUsers(nextUsers)
         } catch (err) {
-            setError(parseErrorMessage(err))
+            const message = parseErrorMessage(err)
+            setError(message)
+            notify.error(message)
         } finally {
             setIsLoading(false)
         }
@@ -61,8 +63,11 @@ export function UsersPage() {
         try {
             await callback()
             await refresh()
+            notify.success('User updated successfully')
         } catch (err) {
-            setError(parseErrorMessage(err))
+            const message = parseErrorMessage(err)
+            setError(message)
+            notify.error(message)
         } finally {
             setActionKey(null)
         }
@@ -83,8 +88,7 @@ export function UsersPage() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Toggle user status and role</CardDescription>
+                <CardTitle>Users</CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
                 {error ? <p className='text-sm text-destructive'>{error}</p> : null}

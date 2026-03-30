@@ -10,6 +10,7 @@ import {
     type ImageAsset,
     uploadImage,
 } from '@/lib/api'
+import { notify } from '@/lib/notify'
 
 type ProductImageManagerProps = {
     imageIds: number[]
@@ -87,7 +88,9 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
                 if (!isActive) {
                     return
                 }
-                setCurrentError(parseErrorMessage(error))
+                const message = parseErrorMessage(error)
+                setCurrentError(message)
+                notify.error(message)
             } finally {
                 if (isActive) {
                     setIsLoadingCurrent(false)
@@ -110,7 +113,9 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
             setLibraryPage(page)
             setHasMoreLibrary(Boolean(payload.next))
         } catch (error) {
-            setLibraryError(parseErrorMessage(error))
+            const message = parseErrorMessage(error)
+            setLibraryError(message)
+            notify.error(message)
         } finally {
             setIsLoadingLibrary(false)
         }
@@ -140,6 +145,7 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
             await onChange([...imageIds, selectedLibraryId])
             setSelectedLibraryId(null)
             setIsChooserOpen(false)
+            notify.success('Image linked to product')
         } finally {
             setIsSaving(false)
         }
@@ -157,8 +163,11 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
             setLibraryImages((prev) => [created, ...prev])
             await onChange([...imageIds, created.id])
             setIsChooserOpen(false)
+            notify.success('Image uploaded and linked')
         } catch (error) {
-            setUploadError(parseErrorMessage(error))
+            const message = parseErrorMessage(error)
+            setUploadError(message)
+            notify.error(message)
         } finally {
             setIsUploading(false)
         }
@@ -168,6 +177,7 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
         setRemovingImageId(imageId)
         try {
             await onChange(imageIds.filter((id) => id !== imageId))
+            notify.success('Image removed from product')
         } finally {
             setRemovingImageId(null)
         }

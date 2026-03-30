@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Pager } from '@/components/common/Pager'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Table,
     TableBody,
@@ -22,6 +22,7 @@ import {
     type PaginatedResponse,
     type Product,
 } from '@/lib/api'
+import { notify } from '@/lib/notify'
 
 function parseErrorMessage(error: unknown): string {
     if (error instanceof ApiError) {
@@ -49,7 +50,9 @@ export function ProductsPage() {
             const nextProducts = await fetchProducts(page, PAGE_SIZE)
             setProducts(nextProducts)
         } catch (err) {
-            setError(parseErrorMessage(err))
+            const message = parseErrorMessage(err)
+            setError(message)
+            notify.error(message)
         } finally {
             setIsLoading(false)
         }
@@ -65,8 +68,11 @@ export function ProductsPage() {
         try {
             await callback()
             await refresh()
+            notify.success('Product updated successfully')
         } catch (err) {
-            setError(parseErrorMessage(err))
+            const message = parseErrorMessage(err)
+            setError(message)
+            notify.error(message)
         } finally {
             setActionKey(null)
         }
@@ -100,8 +106,11 @@ export function ProductsPage() {
             }
 
             await refresh()
+            notify.success('Product created successfully')
         } catch (err) {
-            setError(parseErrorMessage(err))
+            const message = parseErrorMessage(err)
+            setError(message)
+            notify.error(message)
             throw err
         } finally {
             setActionKey(null)
@@ -127,12 +136,14 @@ export function ProductsPage() {
             <Card>
                 <CardHeader className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
                     <div>
-                        <CardTitle>Product Management</CardTitle>
-                        <CardDescription>Publish, archive, and manage stock</CardDescription>
+                        <CardTitle>Products</CardTitle>
                     </div>
                     <CreateProductModal
                         isSubmitting={actionKey === 'product:create'}
-                        onValidationError={setError}
+                        onValidationError={(message) => {
+                            setError(message)
+                            notify.error(message)
+                        }}
                         onCreate={createNewProduct}
                     />
                 </CardHeader>
