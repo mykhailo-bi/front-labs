@@ -76,6 +76,8 @@ export function AppRoutes() {
         return <LoadingView text='Loading session...' />
     }
 
+    const isAdminRoute = location.pathname.startsWith('/admin') || location.pathname === '/'
+
     if (!session.isAuthenticated) {
         const isPublicAuthRoute =
             location.pathname === APP_PATHS.LOGIN ||
@@ -89,7 +91,7 @@ export function AppRoutes() {
             location.pathname === APP_PATHS.ERROR_500 ||
             location.pathname === APP_PATHS.ERROR_503
 
-        if (!isPublicAuthRoute) {
+        if (isAdminRoute) {
             return <Navigate to={APP_PATHS.LOGIN} replace />
         }
 
@@ -135,23 +137,27 @@ export function AppRoutes() {
             return <ErrorPage code={503} />
         }
 
-        return (
-            <LoginPage
-                onLogin={handleLogin}
-                isLoading={session.isLoginLoading}
-                error={session.loginError}
-            />
-        )
+        if (!isPublicAuthRoute) {
+            return <Navigate to={APP_PATHS.ERROR_404} replace />
+        }
+
+        return <LoginPage onLogin={handleLogin} isLoading={session.isLoginLoading} error={session.loginError} />
     }
 
     if (!session.user) {
         return <LoadingView text='Authentication required.' />
     }
 
+    const isAdminUser = session.user.role === 'admin'
+
+    if (isAdminRoute && !isAdminUser) {
+        return <ErrorPage code={403} onLogout={() => void handleLogout()} />
+    }
+
     return (
         <Routes>
             <Route path={APP_PATHS.ERROR_400} element={<ErrorPage code={400} />} />
-            <Route path={APP_PATHS.ERROR_403} element={<ErrorPage code={403} />} />
+            <Route path={APP_PATHS.ERROR_403} element={<ErrorPage code={403} onLogout={() => void handleLogout()} />} />
             <Route path={APP_PATHS.ERROR_404} element={<ErrorPage code={404} />} />
             <Route path={APP_PATHS.ERROR_409} element={<ErrorPage code={409} />} />
             <Route path={APP_PATHS.ERROR_429} element={<ErrorPage code={429} />} />
