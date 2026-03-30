@@ -161,6 +161,7 @@ export function EditUserModal({
                         <Checkbox
                             id={`edit-user-active-${user.id}`}
                             checked={isActive}
+                            disabled={isCurrentUser}
                             onCheckedChange={(checked) => setIsActive(checked === true)}
                         />
                         <Label htmlFor={`edit-user-active-${user.id}`}>Active</Label>
