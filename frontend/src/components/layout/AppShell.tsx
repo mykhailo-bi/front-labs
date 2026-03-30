@@ -71,10 +71,15 @@ export function AppShell({ user, onLogout }: AppShellProps) {
                     <SidebarGroup>
                         <SidebarGroupLabel>Navigation</SidebarGroupLabel>
                         <SidebarGroupContent>
-                            <SidebarMenu>
+                            <SidebarMenu className='px-2 gap-1'>
                                 {navItems.map((item) => (
                                     <SidebarMenuItem key={item.title}>
-                                        <SidebarMenuButton asChild isActive={location.pathname === item.href} tooltip={item.title}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            isActive={location.pathname === item.href}
+                                            tooltip={item.title}
+                                            className='px-3 py-2'
+                                        >
                                             <Link to={item.href}>
                                                 <item.icon />
                                                 <span>{item.title}</span>
