@@ -14,7 +14,11 @@ class Migration(migrations.Migration):
             model_name="user",
             name="role",
             field=models.CharField(
-                choices=[("customer", "Customer"), ("manager", "Manager"), ("admin", "Admin")],
+                choices=[
+                    ("customer", "Customer"),
+                    ("manager", "Manager"),
+                    ("admin", "Admin"),
+                ],
                 default="customer",
                 max_length=16,
             ),
@@ -23,7 +27,11 @@ class Migration(migrations.Migration):
             model_name="user",
             name="status",
             field=models.CharField(
-                choices=[("active", "Active"), ("suspended", "Suspended"), ("invited", "Invited")],
+                choices=[
+                    ("active", "Active"),
+                    ("suspended", "Suspended"),
+                    ("invited", "Invited"),
+                ],
                 default="active",
                 max_length=16,
             ),
@@ -34,7 +42,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("email", models.CharField(max_length=64, unique=True)),
@@ -46,7 +57,9 @@ class Migration(migrations.Migration):
             ],
             options={
                 "db_table": "user_invite",
-                "indexes": [models.Index(fields=["expires_at"], name="user_invite_exp_idx")],
+                "indexes": [
+                    models.Index(fields=["expires_at"], name="user_invite_exp_idx")
+                ],
             },
         ),
     ]

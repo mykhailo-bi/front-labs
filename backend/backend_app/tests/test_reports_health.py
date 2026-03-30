@@ -62,10 +62,16 @@ class ReportsAndHealthTests:
             is_published=True,
         )
         models.Order.objects.create(
-            user=user, status=OrderStatus.PAID, total=Decimal("10.00"), subtotal=Decimal("10.00")
+            user=user,
+            status=OrderStatus.PAID,
+            total=Decimal("10.00"),
+            subtotal=Decimal("10.00"),
         )
         models.Order.objects.create(
-            user=user, status=OrderStatus.PLACED, total=Decimal("5.00"), subtotal=Decimal("5.00")
+            user=user,
+            status=OrderStatus.PLACED,
+            total=Decimal("5.00"),
+            subtotal=Decimal("5.00"),
         )
 
         res = self.client.get("/api/v1/reports/aggregate/", **self._auth_admin())
@@ -117,7 +123,9 @@ class ReportsAndHealthTests:
 
         with (
             mock.patch("backend_app.health.MigrationExecutor", DummyExecutor),
-            mock.patch("backend_app.health.connection.cursor", return_value=DummyCursor()),
+            mock.patch(
+                "backend_app.health.connection.cursor", return_value=DummyCursor()
+            ),
         ):
             response = health_module.readyz(request)
             assert response.status_code == 200
@@ -135,7 +143,9 @@ class ReportsAndHealthTests:
         health_module._READYZ_LAST_OK_AT = None
         with (
             mock.patch("backend_app.health.MigrationExecutor", DummyExecutorPending),
-            mock.patch("backend_app.health.connection.cursor", return_value=DummyCursor()),
+            mock.patch(
+                "backend_app.health.connection.cursor", return_value=DummyCursor()
+            ),
         ):
             response_pending = health_module.readyz(request)
             assert response_pending.status_code == 503

@@ -45,17 +45,27 @@ class Command(BaseCommand):
                 # Re-check under lock.
                 if order.status != OrderStatus.PLACED:
                     continue
-                if not order.reservation_expires_at or order.reservation_expires_at > now:
+                if (
+                    not order.reservation_expires_at
+                    or order.reservation_expires_at > now
+                ):
                     continue
 
-                lines = list(OrderContent.objects.filter(order=order).values("product_id", "count"))
+                lines = list(
+                    OrderContent.objects.filter(order=order).values(
+                        "product_id", "count"
+                    )
+                )
 
                 # Defensive release: data drift (manual edits/bugs) can cause reserved_qty to be
                 # lower than expected. Since the Product model has DB check constraints that
                 # reserved_qty must be >= 0, clamp at 0 to keep the command operational.
                 product_ids = [row["product_id"] for row in lines]
                 products_by_id = {
-                    p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)
+                    p.id: p
+                    for p in Product.objects.select_for_update().filter(
+                        id__in=product_ids
+                    )
                 }
 
                 for line in lines:

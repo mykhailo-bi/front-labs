@@ -55,7 +55,10 @@ def readyz(request):
     global _READYZ_LAST_OK_AT
 
     now_mono = time.monotonic()
-    if _READYZ_LAST_OK_AT is not None and (now_mono - _READYZ_LAST_OK_AT) < _READYZ_CACHE_SECONDS:
+    if (
+        _READYZ_LAST_OK_AT is not None
+        and (now_mono - _READYZ_LAST_OK_AT) < _READYZ_CACHE_SECONDS
+    ):
         # Still confirm DB connectivity quickly.
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")

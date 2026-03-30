@@ -78,14 +78,18 @@ class OrderPaymentTests:
         assert res.status_code == 404
 
     def test_cancel_already_cancelled_is_idempotent(self):
-        order = models.Order.objects.create(user=self.user, status=OrderStatus.CANCELLED)
+        order = models.Order.objects.create(
+            user=self.user, status=OrderStatus.CANCELLED
+        )
         res = self.client.post(
             f"/api/v1/orders/{order.id}/cancel/", {}, format="json", **self._auth_user()
         )
         assert res.status_code == 200
 
     def test_cancel_forbidden_for_other_user(self):
-        other_order = models.Order.objects.create(user=self.other_user, status=OrderStatus.PLACED)
+        other_order = models.Order.objects.create(
+            user=self.other_user, status=OrderStatus.PLACED
+        )
         res = self.client.post(
             f"/api/v1/orders/{other_order.id}/cancel/",
             {},
@@ -103,7 +107,10 @@ class OrderPaymentTests:
         assert res_ship.data["status"] == OrderStatus.SHIPPED
 
         res_deliver = self.client.post(
-            f"/api/v1/orders/{order.id}/deliver/", {}, format="json", **self._auth_admin()
+            f"/api/v1/orders/{order.id}/deliver/",
+            {},
+            format="json",
+            **self._auth_admin(),
         )
         assert res_deliver.status_code == 200
         assert res_deliver.data["status"] == OrderStatus.DELIVERED
@@ -118,12 +125,17 @@ class OrderPaymentTests:
     def test_deliver_invalid_transition_returns_409(self):
         order = models.Order.objects.create(user=self.user, status=OrderStatus.PLACED)
         res_deliver = self.client.post(
-            f"/api/v1/orders/{order.id}/deliver/", {}, format="json", **self._auth_admin()
+            f"/api/v1/orders/{order.id}/deliver/",
+            {},
+            format="json",
+            **self._auth_admin(),
         )
         assert res_deliver.status_code == 409
 
     def test_invoice_forbidden_for_non_owner(self):
-        other_order = models.Order.objects.create(user=self.other_user, status=OrderStatus.PLACED)
+        other_order = models.Order.objects.create(
+            user=self.other_user, status=OrderStatus.PLACED
+        )
         res = self.client.get(
             f"/api/v1/orders/{other_order.id}/invoice/",
             format="json",
@@ -151,7 +163,9 @@ class OrderPaymentTests:
         assert "refund_requested" in event_types
 
     def test_mark_paid_invalid_transition_returns_409(self):
-        order = models.Order.objects.create(user=self.user, status=OrderStatus.CANCELLED)
+        order = models.Order.objects.create(
+            user=self.user, status=OrderStatus.CANCELLED
+        )
         res = self.client.post(
             "/api/v1/payments/mark-paid/",
             {"order_id": order.id, "reference_id": "r1"},
@@ -196,7 +210,9 @@ class OrderPaymentTests:
 
     def test_mark_paid_idempotency_integrityerror_path(self):
         order = models.Order.objects.create(user=self.user, status=OrderStatus.PLACED)
-        existing = models.PaymentAttempt.objects.create(order=order, idempotency_key="idem-3")
+        existing = models.PaymentAttempt.objects.create(
+            order=order, idempotency_key="idem-3"
+        )
         res = self.client.post(
             "/api/v1/payments/mark-paid/",
             {"order_id": order.id, "reference_id": "r1"},
@@ -206,7 +222,9 @@ class OrderPaymentTests:
         )
 
         assert res.status_code == 200
-        attempt = models.PaymentAttempt.objects.get(order=order, idempotency_key="idem-3")
+        attempt = models.PaymentAttempt.objects.get(
+            order=order, idempotency_key="idem-3"
+        )
         assert attempt.id == existing.id
         assert res.data["payment_attempt_id"] == attempt.id
 
@@ -265,8 +283,12 @@ class OrderPaymentTests:
         assert res2.status_code == 200
         assert res2.data["payment_attempt_id"] == attempt_id
 
-        other_order = models.Order.objects.create(user=self.user, status=OrderStatus.SHIPPED)
-        models.PaymentAttempt.objects.create(order=other_order, idempotency_key="cust-2")
+        other_order = models.Order.objects.create(
+            user=self.user, status=OrderStatus.SHIPPED
+        )
+        models.PaymentAttempt.objects.create(
+            order=other_order, idempotency_key="cust-2"
+        )
         res3 = self.client.post(
             f"/api/v1/orders/{other_order.id}/pay/",
             {"reference_id": "r3", "order_id": other_order.id},
@@ -299,7 +321,9 @@ class OrderPaymentTests:
             **self._auth_admin(),
         )
         assert res.status_code == 200
-        assert models.OrderEvent.objects.filter(order=order, event_type="refund_approved").exists()
+        assert models.OrderEvent.objects.filter(
+            order=order, event_type="refund_approved"
+        ).exists()
 
     def test_order_viewset_get_queryset_none_when_unauthenticated(self):
         models.Order.objects.create(user=self.user, status=OrderStatus.PLACED)

@@ -126,7 +126,9 @@ class SimpleJWTAuthentication(authentication.BaseAuthentication):
     def get_user(self, validated_token: AccessToken) -> models.User:
         user_id = validated_token.get(api_settings.USER_ID_CLAIM)
         if user_id is None:
-            raise AuthenticationFailed("Token contained no recognizable user identification")
+            raise AuthenticationFailed(
+                "Token contained no recognizable user identification"
+            )
 
         try:
             user_id_int = int(user_id)

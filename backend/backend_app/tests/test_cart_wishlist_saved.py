@@ -203,10 +203,14 @@ class CartWishlistSavedAddressTests:
             "country": "X",
             "is_default": True,
         }
-        res1 = self.client.post("/api/v1/addresses/", payload, format="json", **self._auth())
+        res1 = self.client.post(
+            "/api/v1/addresses/", payload, format="json", **self._auth()
+        )
         assert res1.status_code == 201
 
-        res2 = self.client.post("/api/v1/addresses/", payload, format="json", **self._auth())
+        res2 = self.client.post(
+            "/api/v1/addresses/", payload, format="json", **self._auth()
+        )
         assert res2.status_code == 400
         assert "details" in res2.data
         assert "is_default" in res2.data.get("details", {})

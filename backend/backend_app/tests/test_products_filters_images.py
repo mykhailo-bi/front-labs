@@ -57,7 +57,9 @@ class ProductFiltersAndImagesTests:
             category=self.cat2,
         )
 
-        res = self.client.get("/api/v1/products/?min_price=10&max_price=20&category=cat1")
+        res = self.client.get(
+            "/api/v1/products/?min_price=10&max_price=20&category=cat1"
+        )
         assert res.status_code == 200
         ids = {row["id"] for row in res.data["results"]}
         assert ids == {p2.id}

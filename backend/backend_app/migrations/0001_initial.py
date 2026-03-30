@@ -17,7 +17,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("count", models.IntegerField()),
@@ -34,7 +37,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("url", models.CharField(max_length=1024)),
@@ -51,7 +57,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
@@ -67,7 +76,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=255)),
@@ -86,7 +98,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("rating", models.IntegerField()),
@@ -102,7 +117,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("username", models.CharField(max_length=32, unique=True)),
@@ -111,7 +129,10 @@ class Migration(migrations.Migration):
                 ("firstname", models.CharField(blank=True, max_length=32, null=True)),
                 ("lastname", models.CharField(blank=True, max_length=32, null=True)),
                 ("description", models.TextField(blank=True, null=True)),
-                ("phone", models.CharField(blank=True, max_length=16, null=True, unique=True)),
+                (
+                    "phone",
+                    models.CharField(blank=True, max_length=16, null=True, unique=True),
+                ),
                 ("is_admin", models.BooleanField()),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
@@ -126,7 +147,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "products_in_cart",
-                    models.ManyToManyField(through="backend_app.Cart", to="backend_app.product"),
+                    models.ManyToManyField(
+                        through="backend_app.Cart", to="backend_app.product"
+                    ),
                 ),
             ],
             options={
@@ -139,19 +162,24 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 (
                     "image",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING, to="backend_app.image"
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="backend_app.image",
                     ),
                 ),
                 (
                     "review",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING, to="backend_app.review"
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="backend_app.review",
                     ),
                 ),
             ],
@@ -163,7 +191,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="review",
             name="images",
-            field=models.ManyToManyField(through="backend_app.ReviewImage", to="backend_app.image"),
+            field=models.ManyToManyField(
+                through="backend_app.ReviewImage", to="backend_app.image"
+            ),
         ),
         migrations.AddField(
             model_name="review",
@@ -185,7 +215,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("alt_text", models.TextField(blank=True, null=True)),
@@ -194,13 +227,15 @@ class Migration(migrations.Migration):
                 (
                     "image",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING, to="backend_app.image"
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="backend_app.image",
                     ),
                 ),
                 (
                     "product",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING, to="backend_app.product"
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="backend_app.product",
                     ),
                 ),
             ],
@@ -222,20 +257,25 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("count", models.IntegerField()),
                 (
                     "order",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING, to="backend_app.order"
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="backend_app.order",
                     ),
                 ),
                 (
                     "product",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING, to="backend_app.product"
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="backend_app.product",
                     ),
                 ),
             ],

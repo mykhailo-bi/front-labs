@@ -42,4 +42,6 @@ class ChangePasswordTests:
         assert res_ok.status_code == 200
         self.user.refresh_from_db()
         assert self.user.password_hash != old_hash
-        assert self.user.tokens_invalidated_at > timezone.now() - timezone.timedelta(minutes=5)
+        assert self.user.tokens_invalidated_at > timezone.now() - timezone.timedelta(
+            minutes=5
+        )

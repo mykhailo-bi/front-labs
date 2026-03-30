@@ -45,8 +45,12 @@ def _chunks(items: list, n: int) -> Iterable[list]:
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Seed demo data into the database")
     p.add_argument("--prefix", default="demo", help="Prefix namespace for seeded rows")
-    p.add_argument("--seed", type=int, default=42, help="PRNG seed for deterministic data")
-    p.add_argument("--reset", action="store_true", help="Delete existing prefixed demo data first")
+    p.add_argument(
+        "--seed", type=int, default=42, help="PRNG seed for deterministic data"
+    )
+    p.add_argument(
+        "--reset", action="store_true", help="Delete existing prefixed demo data first"
+    )
 
     p.add_argument("--admin-username", default="demo_admin")
     p.add_argument("--admin-email", default="demo_admin@example.com")
@@ -54,7 +58,9 @@ def _parse_args() -> argparse.Namespace:
 
     p.add_argument("--users", type=int, default=8, help="Number of regular users")
     p.add_argument("--products", type=int, default=10, help="Number of products")
-    p.add_argument("--reviews-per-product", type=int, default=3, help="Reviews per product")
+    p.add_argument(
+        "--reviews-per-product", type=int, default=3, help="Reviews per product"
+    )
     p.add_argument("--images", type=int, default=30, help="Number of images total")
     return p.parse_args()
 
@@ -85,12 +91,18 @@ def main() -> None:
     with transaction.atomic():
         if args.reset:
             # Delete in dependency order.
-            models.ReviewImage.objects.filter(image__url__contains=f"/seed/{prefix}-").delete()
-            models.ProductImage.objects.filter(image__url__contains=f"/seed/{prefix}-").delete()
+            models.ReviewImage.objects.filter(
+                image__url__contains=f"/seed/{prefix}-"
+            ).delete()
+            models.ProductImage.objects.filter(
+                image__url__contains=f"/seed/{prefix}-"
+            ).delete()
             models.Review.objects.filter(
                 product__name__startswith=f"{prefix}_product_",
             ).delete()
-            models.Product.objects.filter(name__startswith=f"{prefix}_product_").delete()
+            models.Product.objects.filter(
+                name__startswith=f"{prefix}_product_"
+            ).delete()
             models.User.objects.filter(username__startswith=f"{prefix}_user_").delete()
             models.User.objects.filter(username=admin_username).delete()
             # Images last (referenced by User.avatar; and by through tables already deleted).

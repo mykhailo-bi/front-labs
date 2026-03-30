@@ -138,7 +138,9 @@ class SerializerValidationTests:
         )
         assert ser_email.is_valid(), ser_email.errors
 
-        ser_bad = LoginSerializer(data={"username_or_email": "missing", "password": "secret1234"})
+        ser_bad = LoginSerializer(
+            data={"username_or_email": "missing", "password": "secret1234"}
+        )
         assert not ser_bad.is_valid()
 
         ser_bad_pw = LoginSerializer(
@@ -206,7 +208,9 @@ class SerializerValidationTests:
             total=Decimal("10.00"),
             subtotal=Decimal("10.00"),
         )
-        models.OrderContent.objects.create(order=paid_order, product=self.product, count=1)
+        models.OrderContent.objects.create(
+            order=paid_order, product=self.product, count=1
+        )
 
         ser = ReviewSerializer(
             data={"product_id": self.product.id, "rating": 5, "text": "great"},
@@ -225,7 +229,9 @@ class SerializerValidationTests:
     def test_order_serializer_non_admin_cannot_set_user(self):
         from backend_app.serializers import OrderSerializer
 
-        ser = OrderSerializer(data={"user_id": self.user2.id}, context=self._ctx(self.user))
+        ser = OrderSerializer(
+            data={"user_id": self.user2.id}, context=self._ctx(self.user)
+        )
         assert not ser.is_valid()
         assert "user_id" in ser.errors
 
@@ -387,7 +393,8 @@ class SerializerValidationTests:
             is_admin=False,
         )
         with mock.patch(
-            "backend_app.serializers.models.WishlistItem.objects.create", side_effect=IntegrityError
+            "backend_app.serializers.models.WishlistItem.objects.create",
+            side_effect=IntegrityError,
         ):
             wish_err = WishlistItemSerializer(
                 data={"product_id": self.product.id, "user_id": other.id},
@@ -413,7 +420,8 @@ class SerializerValidationTests:
         assert "product_id" in saved_dup.errors
 
         with mock.patch(
-            "backend_app.serializers.models.SavedItem.objects.create", side_effect=IntegrityError
+            "backend_app.serializers.models.SavedItem.objects.create",
+            side_effect=IntegrityError,
         ):
             saved_err = SavedItemSerializer(
                 data={"product_id": self.product.id, "user_id": other.id},
@@ -480,7 +488,8 @@ class SerializerValidationTests:
             is_published=True,
         )
         ser = ReviewSerializer(
-            data={"product_id": product.id, "rating": 6, "text": "x"}, context=self._ctx(self.user)
+            data={"product_id": product.id, "rating": 6, "text": "x"},
+            context=self._ctx(self.user),
         )
         assert not ser.is_valid()
         assert "rating" in ser.errors

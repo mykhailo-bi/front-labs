@@ -18,28 +18,50 @@ class OpenApiAndAdminTests:
         site = admin_module.admin_site
 
         admin_user = type(
-            "U", (), {"is_admin": True, "is_staff": False, "is_superuser": False, "is_active": True}
+            "U",
+            (),
+            {
+                "is_admin": True,
+                "is_staff": False,
+                "is_superuser": False,
+                "is_active": True,
+            },
         )()
         assert site.has_permission(request=type("R", (), {"user": admin_user})())
 
         staff_user = type(
             "U",
             (),
-            {"is_admin": False, "is_staff": True, "is_superuser": False, "is_active": True},
+            {
+                "is_admin": False,
+                "is_staff": True,
+                "is_superuser": False,
+                "is_active": True,
+            },
         )()
         assert site.has_permission(request=type("R", (), {"user": staff_user})())
 
         superuser = type(
             "U",
             (),
-            {"is_admin": False, "is_staff": False, "is_superuser": True, "is_active": True},
+            {
+                "is_admin": False,
+                "is_staff": False,
+                "is_superuser": True,
+                "is_active": True,
+            },
         )()
         assert site.has_permission(request=type("R", (), {"user": superuser})())
 
         inactive = type(
             "U",
             (),
-            {"is_admin": False, "is_staff": True, "is_superuser": False, "is_active": False},
+            {
+                "is_admin": False,
+                "is_staff": True,
+                "is_superuser": False,
+                "is_active": False,
+            },
         )()
         assert not site.has_permission(request=type("R", (), {"user": inactive})())
 
@@ -71,7 +93,13 @@ class OpenApiAndAdminTests:
         )
 
         obj = type("Obj", (), {"user_id": 1})()
-        req_owner = type("R", (), {"user": type("U", (), {"id": 1, "is_admin": False})()})()
-        req_other = type("R", (), {"user": type("U", (), {"id": 2, "is_admin": False})()})()
+        req_owner = type(
+            "R", (), {"user": type("U", (), {"id": 1, "is_admin": False})()}
+        )()
+        req_other = type(
+            "R", (), {"user": type("U", (), {"id": 2, "is_admin": False})()}
+        )()
         assert api_module.IsOwnerOrAdmin().has_object_permission(req_owner, None, obj)
-        assert not api_module.IsOwnerOrAdmin().has_object_permission(req_other, None, obj)
+        assert not api_module.IsOwnerOrAdmin().has_object_permission(
+            req_other, None, obj
+        )

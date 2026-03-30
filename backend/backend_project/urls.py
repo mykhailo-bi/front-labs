@@ -30,7 +30,8 @@ def _docs_enabled() -> bool:
     from django.conf import settings
 
     return getattr(settings, "DEBUG", False) or (
-        str(getattr(settings, "SPECTACULAR_ENABLE_DOCS", "")).lower() in {"1", "true", "yes", "on"}
+        str(getattr(settings, "SPECTACULAR_ENABLE_DOCS", "")).lower()
+        in {"1", "true", "yes", "on"}
     )
 
 
@@ -51,6 +52,10 @@ if _docs_enabled():
     urlpatterns = [
         # OpenAPI schema + Swagger UI
         path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-        path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+        path(
+            "api/docs/",
+            SpectacularSwaggerView.as_view(url_name="schema"),
+            name="swagger-ui",
+        ),
         *urlpatterns,
     ]

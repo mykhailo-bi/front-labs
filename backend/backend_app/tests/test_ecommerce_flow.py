@@ -89,7 +89,9 @@ class EcommerceFlowTests:
         # Checkout
         idem = {"HTTP_IDEMPOTENCY_KEY": "checkout-1"}
         assert models.Order.objects.filter(user=user).count() == 0
-        res = self.client.post("/api/v1/checkout/", {}, format="json", **self._auth(access), **idem)
+        res = self.client.post(
+            "/api/v1/checkout/", {}, format="json", **self._auth(access), **idem
+        )
         assert res.status_code == 201
         order_id = res.data["id"]
         assert res.data["status"] == "placed"
@@ -157,8 +159,12 @@ class EcommerceFlowTests:
         token = issue_token_pair(user=user).access
 
         order = models.Order.objects.create(user=user, status=OrderStatus.PAID)
-        models.OrderContent.objects.create(order=order, product=self.product_active, count=1)
-        models.Review.objects.create(user=user, product=self.product_active, rating=5, text="ok")
+        models.OrderContent.objects.create(
+            order=order, product=self.product_active, count=1
+        )
+        models.Review.objects.create(
+            user=user, product=self.product_active, rating=5, text="ok"
+        )
 
         # Public access should work (no auth header)
         res = self.client.get(f"/api/v1/products/{self.product_active.id}/reviews/")

@@ -13,7 +13,12 @@ from django.db.utils import IntegrityError
 from django.utils import timezone
 
 from rest_framework import routers, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
+from rest_framework.decorators import (
+    action,
+    api_view,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import SAFE_METHODS, BasePermission
@@ -123,7 +128,9 @@ def _create_order_from_cart(
         # Lock cart rows for this user so concurrent checkouts cannot double-spend
         # the same cart contents.
         cart_items = list(
-            models.Cart.objects.select_for_update().filter(user=user).select_related("product")
+            models.Cart.objects.select_for_update()
+            .filter(user=user)
+            .select_related("product")
         )
         if not cart_items:
             raise ValueError("Cart is empty")
@@ -131,7 +138,9 @@ def _create_order_from_cart(
         # Lock all involved products in a stable order to avoid oversell.
         product_ids = sorted({row.product_id for row in cart_items})
         products = list(
-            models.Product.objects.select_for_update().filter(id__in=product_ids).order_by("id")
+            models.Product.objects.select_for_update()
+            .filter(id__in=product_ids)
+            .order_by("id")
         )
         products_by_id = {p.id: p for p in products}
 
@@ -160,8 +169,12 @@ def _create_order_from_cart(
         # (Imported lazily to avoid settings import at module import time.)
         from django.conf import settings
 
-        reservation_ttl_seconds = int(getattr(settings, "ORDER_RESERVATION_TTL_SECONDS", 30 * 60))
-        reservation_expires_at = timezone.now() + timedelta(seconds=reservation_ttl_seconds)
+        reservation_ttl_seconds = int(
+            getattr(settings, "ORDER_RESERVATION_TTL_SECONDS", 30 * 60)
+        )
+        reservation_expires_at = timezone.now() + timedelta(
+            seconds=reservation_ttl_seconds
+        )
 
         def _get_order_currency() -> str:
             return str(getattr(settings, "ORDER_CURRENCY", "USD") or "USD")
@@ -228,7 +241,9 @@ def _create_order_from_cart(
         # Create line items and reserve stock. Use DB-atomic increments.
         models.OrderContent.objects.bulk_create(
             [
-                models.OrderContent(order=order, product_id=item.product_id, count=item.count)
+                models.OrderContent(
+                    order=order, product_id=item.product_id, count=item.count
+                )
                 for item in cart_items
             ]
         )
@@ -249,7 +264,9 @@ def _create_order_from_cart(
     retrieve=extend_schema(tags=["users"], summary="Get user (admin)"),
     create=extend_schema(tags=["users"], summary="Create user (admin)"),
     update=extend_schema(tags=["users"], summary="Update user (admin)"),
-    partial_update=extend_schema(tags=["users"], summary="Partially update user (admin)"),
+    partial_update=extend_schema(
+        tags=["users"], summary="Partially update user (admin)"
+    ),
     destroy=extend_schema(tags=["users"], summary="Delete user (admin)"),
 )
 class UserViewSet(viewsets.ModelViewSet):
@@ -272,7 +289,12 @@ class UserViewSet(viewsets.ModelViewSet):
             404: OpenApiResponse(description="User not found"),
         },
     )
-    @action(detail=True, methods=["get"], url_path="orders", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="orders",
+        permission_classes=[IsAuthenticated],
+    )
     def orders(self, request, pk=None):
         """List orders for a specific user.
 
@@ -283,7 +305,9 @@ class UserViewSet(viewsets.ModelViewSet):
         try:
             user_id = int(pk)
         except (TypeError, ValueError):
-            return Response({"detail": "Invalid user id"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Invalid user id"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         is_admin = bool(request.user and getattr(request.user, "is_admin", False))
         if not is_admin and request.user.id != user_id:
@@ -291,7 +315,9 @@ class UserViewSet(viewsets.ModelViewSet):
 
         target = models.User.objects.filter(id=user_id).first()
         if not target:
-            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         qs = models.Order.objects.filter(user=target).order_by("-created_at")
         page = self.paginate_queryset(qs)
@@ -299,7 +325,9 @@ class UserViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(
                 OrderSerializer(page, many=True, context={"request": request}).data
             )
-        return Response(OrderSerializer(qs, many=True, context={"request": request}).data)
+        return Response(
+            OrderSerializer(qs, many=True, context={"request": request}).data
+        )
 
     @extend_schema(
         tags=["users"],
@@ -307,7 +335,9 @@ class UserViewSet(viewsets.ModelViewSet):
         request=UserInviteSerializer,
         responses={201: UserInviteSerializer},
     )
-    @action(detail=False, methods=["post"], url_path="invites", permission_classes=[IsAdmin])
+    @action(
+        detail=False, methods=["post"], url_path="invites", permission_classes=[IsAdmin]
+    )
     def invite(self, request):
         serializer = UserInviteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -321,15 +351,21 @@ class UserViewSet(viewsets.ModelViewSet):
                 expires_at=expiry,
             )
         except IntegrityError:
-            return Response({"email": "Invite already exists."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(UserInviteSerializer(invite).data, status=status.HTTP_201_CREATED)
+            return Response(
+                {"email": "Invite already exists."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        return Response(
+            UserInviteSerializer(invite).data, status=status.HTTP_201_CREATED
+        )
 
     @extend_schema(
         tags=["users"],
         summary="Export users (CSV, admin)",
         responses={200: OpenApiResponse(description="CSV export")},
     )
-    @action(detail=False, methods=["get"], url_path="export", permission_classes=[IsAdmin])
+    @action(
+        detail=False, methods=["get"], url_path="export", permission_classes=[IsAdmin]
+    )
     def export_users(self, request):
         output = StringIO()
         writer = csv.writer(output)
@@ -382,7 +418,9 @@ class UserViewSet(viewsets.ModelViewSet):
     def import_users(self, request):
         upload = request.FILES.get("file")
         if upload is None:
-            return Response({"file": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"file": "This field is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         max_bytes = int(getattr(settings, "CSV_IMPORT_MAX_BYTES", 2 * 1024 * 1024))
         max_rows = int(getattr(settings, "CSV_IMPORT_MAX_ROWS", 1000))
@@ -402,7 +440,8 @@ class UserViewSet(viewsets.ModelViewSet):
         for idx, row in enumerate(reader, start=1):
             if max_rows >= 0 and idx > max_rows:
                 return Response(
-                    {"detail": "CSV row limit exceeded."}, status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "CSV row limit exceeded."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             email = (row.get("email") or "").strip()
             if not email:
@@ -430,7 +469,11 @@ class UserViewSet(viewsets.ModelViewSet):
                 updated += int(not created_flag)
             except IntegrityError:
                 errors.append(
-                    {"row": idx, "email": email, "detail": "Unique constraint violation."}
+                    {
+                        "row": idx,
+                        "email": email,
+                        "detail": "Unique constraint violation.",
+                    }
                 )
 
         if errors:
@@ -494,7 +537,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         summary="Archive product (admin)",
         responses={200: ProductSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="archive", permission_classes=[IsAdmin])
+    @action(
+        detail=True, methods=["post"], url_path="archive", permission_classes=[IsAdmin]
+    )
     def archive(self, request, pk=None):
         product = self.get_object()
         product.status = "archived"
@@ -506,7 +551,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         summary="Export products (CSV, admin)",
         responses={200: OpenApiResponse(description="CSV export")},
     )
-    @action(detail=False, methods=["get"], url_path="export", permission_classes=[IsAdmin])
+    @action(
+        detail=False, methods=["get"], url_path="export", permission_classes=[IsAdmin]
+    )
     def export_csv(self, request):
         output = StringIO()
         writer = csv.writer(output)
@@ -563,7 +610,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     def import_csv(self, request):
         upload = request.FILES.get("file")
         if upload is None:
-            return Response({"file": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"file": "This field is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         max_bytes = int(getattr(settings, "CSV_IMPORT_MAX_BYTES", 2 * 1024 * 1024))
         max_rows = int(getattr(settings, "CSV_IMPORT_MAX_ROWS", 1000))
@@ -581,7 +630,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         for idx, row in enumerate(reader, start=1):
             if max_rows >= 0 and idx > max_rows:
                 return Response(
-                    {"detail": "CSV row limit exceeded."}, status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "CSV row limit exceeded."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             sku = (row.get("sku") or "").strip() or None
             defaults = {
@@ -624,7 +674,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(
                 ReviewSerializer(page, many=True, context={"request": request}).data
             )
-        return Response(ReviewSerializer(qs, many=True, context={"request": request}).data)
+        return Response(
+            ReviewSerializer(qs, many=True, context={"request": request}).data
+        )
 
     @extend_schema(
         tags=["products"],
@@ -633,7 +685,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         request=SetProductImagesSerializer,
         responses={200: ProductSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="images/set", permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="images/set",
+        permission_classes=[IsAdmin],
+    )
     def set_images(self, request, pk=None):
         """Replace all product image associations.
 
@@ -645,7 +702,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         image_ids = request.data.get("image_ids")
         if not isinstance(image_ids, list):
             return Response(
-                {"image_ids": "Must be a list of IDs."}, status=status.HTTP_400_BAD_REQUEST
+                {"image_ids": "Must be a list of IDs."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Normalize to ints and reject duplicates up-front to avoid DB unique violations.
@@ -666,7 +724,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         images = list(models.Image.objects.filter(id__in=image_ids_int))
         if len(images) != len(set(image_ids_int)):
             return Response(
-                {"image_ids": "One or more images not found."}, status=status.HTTP_400_BAD_REQUEST
+                {"image_ids": "One or more images not found."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         with transaction.atomic():
@@ -683,7 +742,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         request=ProductImageAltTextSerializer,
         responses={200: ProductSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="images/alt-text", permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="images/alt-text",
+        permission_classes=[IsAdmin],
+    )
     def set_image_alt_text(self, request, pk=None):
         product = self.get_object()
         serializer = ProductImageAltTextSerializer(data=request.data)
@@ -692,10 +756,13 @@ class ProductViewSet(viewsets.ModelViewSet):
         alt_text = serializer.validated_data.get("alt_text")
 
         try:
-            product_image = models.ProductImage.objects.get(product=product, image_id=image_id)
+            product_image = models.ProductImage.objects.get(
+                product=product, image_id=image_id
+            )
         except models.ProductImage.DoesNotExist:
             return Response(
-                {"detail": "Image not associated with product."}, status=status.HTTP_404_NOT_FOUND
+                {"detail": "Image not associated with product."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         product_image.alt_text = alt_text
@@ -708,7 +775,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     retrieve=extend_schema(tags=["orders"], summary="Get order"),
     create=extend_schema(tags=["orders"], summary="Create order (admin)"),
     update=extend_schema(tags=["orders"], summary="Update order (admin)"),
-    partial_update=extend_schema(tags=["orders"], summary="Partially update order (admin)"),
+    partial_update=extend_schema(
+        tags=["orders"], summary="Partially update order (admin)"
+    ),
     destroy=extend_schema(tags=["orders"], summary="Delete order (admin)"),
 )
 class OrderViewSet(viewsets.ModelViewSet):
@@ -737,7 +806,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         request=None,
         responses={200: OrderSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="ship", permission_classes=[IsAdmin])
+    @action(
+        detail=True, methods=["post"], url_path="ship", permission_classes=[IsAdmin]
+    )
     def ship(self, request, pk=None):
         order = self.get_object()
         if not can_transition(from_status=order.status, to_status=OrderStatus.SHIPPED):
@@ -756,10 +827,14 @@ class OrderViewSet(viewsets.ModelViewSet):
         request=None,
         responses={200: OrderSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="deliver", permission_classes=[IsAdmin])
+    @action(
+        detail=True, methods=["post"], url_path="deliver", permission_classes=[IsAdmin]
+    )
     def deliver(self, request, pk=None):
         order = self.get_object()
-        if not can_transition(from_status=order.status, to_status=OrderStatus.DELIVERED):
+        if not can_transition(
+            from_status=order.status, to_status=OrderStatus.DELIVERED
+        ):
             return Response(
                 {"detail": "Invalid status transition"}, status=status.HTTP_409_CONFLICT
             )
@@ -775,7 +850,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         request=None,
         responses={200: OrderSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="refund-approve", permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="refund-approve",
+        permission_classes=[IsAdmin],
+    )
     def admin_refund(self, request, pk=None):
         order = self.get_object()
         models.OrderEvent.objects.create(order=order, event_type="refund_approved")
@@ -791,21 +871,36 @@ class OrderViewSet(viewsets.ModelViewSet):
         tags=["orders"],
         summary="Cancel order (customer)",
         description="Allow a customer to cancel their own placed order before it is paid/shipped.",
-        responses={200: OrderSerializer, 400: OpenApiResponse(description="Invalid state")},
+        responses={
+            200: OrderSerializer,
+            400: OpenApiResponse(description="Invalid state"),
+        },
     )
-    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="cancel",
+        permission_classes=[IsAuthenticated],
+    )
     def cancel(self, request, pk=None):
         try:
             order = models.Order.objects.get(pk=pk)
         except models.Order.DoesNotExist:
-            return Response({"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
-        if not (getattr(request.user, "is_admin", False) or order.user_id == request.user.id):
+        if not (
+            getattr(request.user, "is_admin", False) or order.user_id == request.user.id
+        ):
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
-        if not can_transition(from_status=order.status, to_status=OrderStatus.CANCELLED):
+        if not can_transition(
+            from_status=order.status, to_status=OrderStatus.CANCELLED
+        ):
             return Response(
-                {"detail": "Cannot cancel in current status"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Cannot cancel in current status"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if order.status == OrderStatus.CANCELLED:
@@ -814,7 +909,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         # Release reserved stock.
         with transaction.atomic():
             order = models.Order.objects.select_for_update().get(pk=pk)
-            if not can_transition(from_status=order.status, to_status=OrderStatus.CANCELLED):
+            if not can_transition(
+                from_status=order.status, to_status=OrderStatus.CANCELLED
+            ):
                 return Response(
                     {"detail": "Cannot cancel in current status"},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -849,14 +946,19 @@ class OrderViewSet(viewsets.ModelViewSet):
             404: OpenApiResponse(description="Order not found"),
         },
     )
-    @action(detail=True, methods=["post"], url_path="pay", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="pay",
+        permission_classes=[IsAuthenticated],
+    )
     def pay(self, request, pk=None):
         serializer = CustomerMarkPaidSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         order_id = int(pk)
-        idempotency_key = request.headers.get("Idempotency-Key") or serializer.validated_data.get(
-            "idempotency_key"
-        )
+        idempotency_key = request.headers.get(
+            "Idempotency-Key"
+        ) or serializer.validated_data.get("idempotency_key")
         reference_id = serializer.validated_data.get("reference_id")
         if idempotency_key is not None and not str(idempotency_key).strip():
             idempotency_key = None
@@ -864,7 +966,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         try:
             order = models.Order.objects.get(id=order_id)
         except models.Order.DoesNotExist:
-            return Response({"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         if order.user_id != request.user.id:
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
@@ -877,7 +981,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                 ).first()
                 if existing:
                     if order.status != OrderStatus.PAID:
-                        if not can_transition(from_status=order.status, to_status=OrderStatus.PAID):
+                        if not can_transition(
+                            from_status=order.status, to_status=OrderStatus.PAID
+                        ):
                             return Response(
                                 {
                                     "detail": f"Invalid status transition: {order.status} -> {OrderStatus.PAID}."
@@ -890,7 +996,9 @@ class OrderViewSet(viewsets.ModelViewSet):
 
                     return Response(
                         {
-                            "order": OrderSerializer(order, context={"request": request}).data,
+                            "order": OrderSerializer(
+                                order, context={"request": request}
+                            ).data,
                             "payment_attempt_id": existing.id,
                         }
                     )
@@ -917,7 +1025,9 @@ class OrderViewSet(viewsets.ModelViewSet):
 
             if not can_transition(from_status=order.status, to_status=OrderStatus.PAID):
                 return Response(
-                    {"detail": f"Invalid status transition: {order.status} -> {OrderStatus.PAID}."},
+                    {
+                        "detail": f"Invalid status transition: {order.status} -> {OrderStatus.PAID}."
+                    },
                     status=status.HTTP_409_CONFLICT,
                 )
             order.status = OrderStatus.PAID
@@ -942,10 +1052,17 @@ class OrderViewSet(viewsets.ModelViewSet):
         description="Return a minimal text invoice for the order.",
         responses={200: OpenApiResponse(description="Invoice text")},
     )
-    @action(detail=True, methods=["get"], url_path="invoice", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="invoice",
+        permission_classes=[IsAuthenticated],
+    )
     def invoice(self, request, pk=None):
         order = self.get_object()
-        if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
+        if order.user_id != request.user.id and not getattr(
+            request.user, "is_admin", False
+        ):
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         content = (
@@ -965,7 +1082,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         request=RefundRequestSerializer,
         responses={201: RefundRequestSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="refund", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="refund",
+        permission_classes=[IsAuthenticated],
+    )
     def refund(self, request, pk=None):
         order = self.get_object()
         if order.user_id != request.user.id:
@@ -981,17 +1103,26 @@ class OrderViewSet(viewsets.ModelViewSet):
         models.OrderEvent.objects.create(
             order=order, event_type="refund_requested", note=obj.reason or None
         )
-        return Response(RefundRequestSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(
+            RefundRequestSerializer(obj).data, status=status.HTTP_201_CREATED
+        )
 
     @extend_schema(
         tags=["orders"],
         summary="List order timeline",
         responses={200: OrderEventSerializer(many=True)},
     )
-    @action(detail=True, methods=["get"], url_path="timeline", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="timeline",
+        permission_classes=[IsAuthenticated],
+    )
     def timeline(self, request, pk=None):
         order = self.get_object()
-        if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
+        if order.user_id != request.user.id and not getattr(
+            request.user, "is_admin", False
+        ):
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
         events = models.OrderEvent.objects.filter(order=order).order_by("created_at")
         return Response(OrderEventSerializer(events, many=True).data)
@@ -1054,7 +1185,9 @@ class ReviewViewSet(viewsets.ModelViewSet):
     retrieve=extend_schema(tags=["images"], summary="Get image (admin)"),
     create=extend_schema(tags=["images"], summary="Create image (admin)"),
     update=extend_schema(tags=["images"], summary="Update image (admin)"),
-    partial_update=extend_schema(tags=["images"], summary="Partially update image (admin)"),
+    partial_update=extend_schema(
+        tags=["images"], summary="Partially update image (admin)"
+    ),
     destroy=extend_schema(tags=["images"], summary="Delete image (admin)"),
 )
 class ImageViewSet(viewsets.ModelViewSet):
@@ -1082,7 +1215,9 @@ class ImageViewSet(viewsets.ModelViewSet):
     def upload(self, request):
         upload = request.FILES.get("file")
         if upload is None:
-            return Response({"file": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"file": "This field is required."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         max_bytes = int(getattr(settings, "IMAGE_UPLOAD_MAX_BYTES", 5 * 1024 * 1024))
         if getattr(upload, "size", 0) > max_bytes:
@@ -1116,7 +1251,9 @@ class ImageViewSet(viewsets.ModelViewSet):
         ext = _sniff_ext(upload)
         if ext is None:
             return Response(
-                {"file": "Unsupported or invalid image file. Allowed: jpeg, png, webp, gif."},
+                {
+                    "file": "Unsupported or invalid image file. Allowed: jpeg, png, webp, gif."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -1128,7 +1265,9 @@ class ImageViewSet(viewsets.ModelViewSet):
 
         # Store relative URL; frontend can prefix with API host if needed.
         img = models.Image.objects.create(url=relative_url)
-        return Response(ImageSerializer(img, context={"request": request}).data, status=201)
+        return Response(
+            ImageSerializer(img, context={"request": request}).data, status=201
+        )
 
 
 @extend_schema(
@@ -1240,7 +1379,8 @@ def change_password(request):
     # Verify current password
     if not verify_password(current_password, request.user.password_hash):
         return Response(
-            {"detail": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST
+            {"detail": "Current password is incorrect"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     if len(new_password) < 8:
@@ -1251,7 +1391,9 @@ def change_password(request):
 
     request.user.password_hash = hash_password(new_password)
     request.user.tokens_invalidated_at = timezone.now()
-    request.user.save(update_fields=["password_hash", "tokens_invalidated_at", "updated_at"])
+    request.user.save(
+        update_fields=["password_hash", "tokens_invalidated_at", "updated_at"]
+    )
 
     return Response(status=status.HTTP_200_OK)
 
@@ -1290,7 +1432,9 @@ def checkout(request):
     payload = CheckoutRequestSerializer(data=request.data)
     payload.is_valid(raise_exception=True)
     try:
-        order = _create_order_from_cart(user=request.user, idempotency_key=idempotency_key)
+        order = _create_order_from_cart(
+            user=request.user, idempotency_key=idempotency_key
+        )
     except ValueError as exc:
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1410,7 +1554,9 @@ def mark_paid(request):
         try:
             order = models.Order.objects.select_for_update().get(id=order_id)
         except models.Order.DoesNotExist:
-            return Response({"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND
+            )
 
         if idempotency_key:
             existing = models.PaymentAttempt.objects.filter(
@@ -1419,7 +1565,9 @@ def mark_paid(request):
             if existing:
                 # Idempotency: ensure order is paid if a succeeded attempt exists.
                 if order.status != OrderStatus.PAID:
-                    if not can_transition(from_status=order.status, to_status=OrderStatus.PAID):
+                    if not can_transition(
+                        from_status=order.status, to_status=OrderStatus.PAID
+                    ):
                         return Response(
                             {
                                 "detail": f"Invalid status transition: {order.status} -> {OrderStatus.PAID}."
@@ -1432,13 +1580,17 @@ def mark_paid(request):
 
                 return Response(
                     {
-                        "order": OrderSerializer(order, context={"request": request}).data,
+                        "order": OrderSerializer(
+                            order, context={"request": request}
+                        ).data,
                         "payment_attempt_id": existing.id,
                     }
                 )
 
         if order.status == OrderStatus.PAID:
-            return Response({"order": OrderSerializer(order, context={"request": request}).data})
+            return Response(
+                {"order": OrderSerializer(order, context={"request": request}).data}
+            )
 
         try:
             attempt = models.PaymentAttempt.objects.create(
@@ -1457,7 +1609,9 @@ def mark_paid(request):
 
         if not can_transition(from_status=order.status, to_status=OrderStatus.PAID):
             return Response(
-                {"detail": f"Invalid status transition: {order.status} -> {OrderStatus.PAID}."},
+                {
+                    "detail": f"Invalid status transition: {order.status} -> {OrderStatus.PAID}."
+                },
                 status=status.HTTP_409_CONFLICT,
             )
         order.status = OrderStatus.PAID
@@ -1489,7 +1643,9 @@ def report_aggregate(request):
 
     refunds = models.RefundRequest.objects.count()
     at_risk_products = models.Product.objects.filter(stock_qty__lte=1).count()
-    month_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_start = timezone.now().replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
     mtd_orders = models.Order.objects.filter(created_at__gte=month_start).count()
 
     return Response(
@@ -1520,7 +1676,9 @@ class CartItemViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return models.Cart.objects.filter(user=self.request.user).select_related("product")
+        return models.Cart.objects.filter(user=self.request.user).select_related(
+            "product"
+        )
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -1548,7 +1706,9 @@ class CartItemViewSet(viewsets.ModelViewSet):
                 "tax": "0",
                 "discount": "0",
                 "total": f"{subtotal:.2f}",
-                "items": CartItemSerializer(items, many=True, context={"request": request}).data,
+                "items": CartItemSerializer(
+                    items, many=True, context={"request": request}
+                ).data,
             }
         )
 
@@ -1572,7 +1732,9 @@ class WishlistViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return models.WishlistItem.objects.filter(user=self.request.user).select_related("product")
+        return models.WishlistItem.objects.filter(
+            user=self.request.user
+        ).select_related("product")
 
     def perform_create(self, serializer):
         try:
@@ -1592,7 +1754,9 @@ class SavedItemViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return models.SavedItem.objects.filter(user=self.request.user).select_related("product")
+        return models.SavedItem.objects.filter(user=self.request.user).select_related(
+            "product"
+        )
 
     def perform_create(self, serializer):
         try:
@@ -1636,7 +1800,9 @@ def logout(request):
             refresh_token=refresh_token
         )  # Validate token structure and blacklist state
     except Exception:
-        return Response({"detail": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -1645,7 +1811,9 @@ def logout(request):
         jti = rt["jti"]
         exp = rt["exp"]
     except Exception:
-        return Response({"detail": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "Invalid refresh token"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     models.BlacklistedToken.objects.get_or_create(
         jti=jti,
@@ -1680,7 +1848,9 @@ def password_reset_request(request):
         models.PasswordResetToken.objects.filter(expires_at__lte=now).delete()
 
         # Enforce per-user cap on active tokens.
-        max_tokens = int(getattr(settings, "PASSWORD_RESET_MAX_ACTIVE_TOKENS_PER_USER", 1))
+        max_tokens = int(
+            getattr(settings, "PASSWORD_RESET_MAX_ACTIVE_TOKENS_PER_USER", 1)
+        )
         # If we are going to create a new token, keep at most (max_tokens - 1)
         # existing tokens so the total stays within limit.
         keep_existing = max(0, max_tokens - 1) if max_tokens >= 0 else None
@@ -1694,7 +1864,9 @@ def password_reset_request(request):
 
         token = uuid4().hex
         expiry = now + timedelta(hours=1)
-        models.PasswordResetToken.objects.create(user=user, token=token, expires_at=expiry)
+        models.PasswordResetToken.objects.create(
+            user=user, token=token, expires_at=expiry
+        )
         # NOTE: In a real system we'd send email here.
     return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1722,14 +1894,17 @@ def password_reset_confirm(request):
         )
         if not prt:
             return Response(
-                {"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Invalid or expired token"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         user = prt.user
 
         user.password_hash = hash_password(password)
         user.tokens_invalidated_at = timezone.now()
-        user.save(update_fields=["password_hash", "tokens_invalidated_at", "updated_at"])
+        user.save(
+            update_fields=["password_hash", "tokens_invalidated_at", "updated_at"]
+        )
         prt.used_at = timezone.now()
         prt.save(update_fields=["used_at"])
 
@@ -1737,9 +1912,7 @@ def password_reset_confirm(request):
         models.PasswordResetToken.objects.filter(
             user=user,
             used_at__isnull=True,
-        ).exclude(
-            pk=prt.pk
-        ).update(used_at=timezone.now())
+        ).exclude(pk=prt.pk).update(used_at=timezone.now())
 
     return Response(status=status.HTTP_200_OK)
 
@@ -1766,7 +1939,9 @@ def email_verification_request(request):
         models.EmailVerificationToken.objects.filter(expires_at__lte=now).delete()
 
         # Enforce per-user cap on active tokens.
-        max_tokens = int(getattr(settings, "EMAIL_VERIFICATION_MAX_ACTIVE_TOKENS_PER_USER", 1))
+        max_tokens = int(
+            getattr(settings, "EMAIL_VERIFICATION_MAX_ACTIVE_TOKENS_PER_USER", 1)
+        )
         active_qs = models.EmailVerificationToken.objects.filter(
             user=user, used_at__isnull=True, expires_at__gt=now
         ).order_by("-created_at")
@@ -1777,7 +1952,9 @@ def email_verification_request(request):
 
         token = uuid4().hex
         expiry = now + timedelta(hours=24)
-        models.EmailVerificationToken.objects.create(user=user, token=token, expires_at=expiry)
+        models.EmailVerificationToken.objects.create(
+            user=user, token=token, expires_at=expiry
+        )
         # NOTE: In a real system we'd send email here.
     return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1804,14 +1981,17 @@ def email_verification_confirm(request):
         )
         if not evt:
             return Response(
-                {"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Invalid or expired token"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         user = evt.user
         if not user.is_email_verified:
             user.is_email_verified = True
             user.email_verified_at = timezone.now()
-            user.save(update_fields=["is_email_verified", "email_verified_at", "updated_at"])
+            user.save(
+                update_fields=["is_email_verified", "email_verified_at", "updated_at"]
+            )
 
         evt.used_at = timezone.now()
         evt.save(update_fields=["used_at"])

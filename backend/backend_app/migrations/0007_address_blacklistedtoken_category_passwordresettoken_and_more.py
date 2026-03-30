@@ -18,7 +18,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("label", models.CharField(blank=True, max_length=64, null=True)),
@@ -44,7 +47,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("jti", models.CharField(max_length=255, unique=True)),
@@ -62,7 +68,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=64)),
@@ -80,7 +89,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("token", models.CharField(max_length=64, unique=True)),
@@ -98,7 +110,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
@@ -113,7 +128,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
@@ -209,12 +227,16 @@ class Migration(migrations.Migration):
             model_name="user",
             name="tokens_invalidated_at",
             field=models.DateTimeField(
-                default=datetime.datetime(1970, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)
+                default=datetime.datetime(
+                    1970, 1, 1, 0, 0, tzinfo=datetime.timezone.utc
+                )
             ),
         ),
         migrations.AddIndex(
             model_name="product",
-            index=models.Index(fields=["is_published"], name="product_is_published_idx"),
+            index=models.Index(
+                fields=["is_published"], name="product_is_published_idx"
+            ),
         ),
         migrations.AddField(
             model_name="wishlistitem",
