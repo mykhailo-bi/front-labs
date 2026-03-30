@@ -58,7 +58,7 @@ export function AppRoutes() {
             <Route element={<AppShell user={session.user} onLogout={handleLogout} />}>
                 <Route path='/' element={<Navigate to={APP_PATHS.OVERVIEW} replace />} />
                 <Route path={APP_PATHS.OVERVIEW} element={<OverviewPage />} />
-                <Route path={APP_PATHS.USERS} element={<UsersPage />} />
+                <Route path={APP_PATHS.USERS} element={<UsersPage currentUserId={session.user.id} />} />
                 <Route path={APP_PATHS.PRODUCTS} element={<ProductsPage />} />
                 <Route path={APP_PATHS.ORDERS} element={<OrdersPage />} />
             </Route>

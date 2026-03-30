@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Pager } from '@/components/common/Pager'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
     Card,
     CardContent,
@@ -16,7 +15,17 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { ApiError, fetchUsers, updateUser, type PaginatedResponse, type User } from '@/lib/api'
+import { CreateUserModal } from '@/features/users/components/CreateUserModal'
+import { EditUserModal } from '@/features/users/components/EditUserModal'
+import {
+    ApiError,
+    createUser,
+    deleteUser,
+    fetchUsers,
+    updateUserProfile,
+    type PaginatedResponse,
+    type User,
+} from '@/lib/api'
 import { notify } from '@/lib/notify'
 
 function parseErrorMessage(error: unknown): string {
@@ -31,7 +40,11 @@ function parseErrorMessage(error: unknown): string {
 
 const PAGE_SIZE = 10
 
-export function UsersPage() {
+type UsersPageProps = {
+    currentUserId: number
+}
+
+export function UsersPage({ currentUserId }: UsersPageProps) {
     const [users, setUsers] = useState<PaginatedResponse<User> | null>(null)
     const [page, setPage] = useState(1)
     const [isLoading, setIsLoading] = useState(true)
@@ -57,17 +70,90 @@ export function UsersPage() {
         void refresh()
     }, [refresh])
 
-    const applyAction = async (key: string, callback: () => Promise<void>) => {
+    const applyAction = async (
+        key: string,
+        callback: () => Promise<void>,
+        successMessage = 'User updated successfully',
+    ) => {
         setActionKey(key)
         setError(null)
         try {
             await callback()
             await refresh()
-            notify.success('User updated successfully')
+            notify.success(successMessage)
         } catch (err) {
             const message = parseErrorMessage(err)
             setError(message)
             notify.error(message)
+        } finally {
+            setActionKey(null)
+        }
+    }
+
+    const updateExistingUser = async (
+        id: number,
+        input: {
+            username: string
+            email: string
+            password?: string
+            firstname?: string
+            lastname?: string
+            role: 'admin' | 'customer'
+            status: 'active' | 'suspended'
+        },
+    ) => {
+        await applyAction(`user:edit:${id}`, async () => {
+            await updateUserProfile(id, {
+                username: input.username,
+                email: input.email,
+                password: input.password,
+                firstname: input.firstname,
+                lastname: input.lastname,
+                role: input.role,
+                status: input.status,
+            })
+        })
+    }
+
+    const deleteExistingUser = async (id: number) => {
+        await applyAction(
+            `user:delete:${id}`,
+            async () => {
+                await deleteUser(id)
+            },
+            'User deleted successfully',
+        )
+    }
+
+    const createNewUser = async (input: {
+        username: string
+        email: string
+        password: string
+        firstname?: string
+        lastname?: string
+        role: 'admin' | 'customer'
+        status: 'active' | 'suspended'
+    }) => {
+        setActionKey('user:create')
+        setError(null)
+        try {
+            await createUser({
+                username: input.username,
+                email: input.email,
+                password: input.password,
+                firstname: input.firstname,
+                lastname: input.lastname,
+                role: input.role,
+                status: input.status,
+            })
+
+            await refresh()
+            notify.success('User created successfully')
+        } catch (err) {
+            const message = parseErrorMessage(err)
+            setError(message)
+            notify.error(message)
+            throw err
         } finally {
             setActionKey(null)
         }
@@ -86,13 +172,25 @@ export function UsersPage() {
     const hasNextPage = isServerPaginated ? Boolean(users?.next) : page < totalPages
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Users</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-                {error ? <p className='text-sm text-destructive'>{error}</p> : null}
-                <Table>
+        <section className='space-y-4'>
+            {error ? <p className='text-sm text-destructive'>{error}</p> : null}
+
+            <Card>
+                <CardHeader className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+                    <div>
+                        <CardTitle>Users</CardTitle>
+                    </div>
+                    <CreateUserModal
+                        isSubmitting={actionKey === 'user:create'}
+                        onValidationError={(message) => {
+                            setError(message)
+                            notify.error(message)
+                        }}
+                        onCreate={createNewUser}
+                    />
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                    <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>ID</TableHead>
@@ -105,10 +203,10 @@ export function UsersPage() {
                     </TableHeader>
                     <TableBody>
                         {visibleUsers.map((user) => {
-                            const key = `user:${user.id}`
-                            const nextStatus = user.status === 'active' ? 'suspended' : 'active'
-                            const nextRole = user.role === 'admin' ? 'customer' : 'admin'
-                            const isBusy = actionKey === key
+                            const isBusy =
+                                actionKey === `user:edit:${user.id}` ||
+                                actionKey === `user:delete:${user.id}` ||
+                                actionKey === 'user:create'
 
                             return (
                                 <TableRow key={user.id}>
@@ -123,47 +221,35 @@ export function UsersPage() {
                                     <TableCell>{user.role}</TableCell>
                                     <TableCell className='text-right'>
                                         <div className='flex justify-end gap-2'>
-                                            <Button
-                                                size='sm'
-                                                variant='outline'
-                                                disabled={isBusy}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        await updateUser(user.id, { status: nextStatus })
-                                                    })
-                                                }
-                                            >
-                                                {nextStatus}
-                                            </Button>
-                                            <Button
-                                                size='sm'
-                                                variant='outline'
-                                                disabled={isBusy}
-                                                onClick={() =>
-                                                    void applyAction(key, async () => {
-                                                        await updateUser(user.id, { role: nextRole })
-                                                    })
-                                                }
-                                            >
-                                                Make {nextRole}
-                                            </Button>
+                                            <EditUserModal
+                                                user={user}
+                                                currentUserId={currentUserId}
+                                                isSubmitting={isBusy}
+                                                onValidationError={(message) => {
+                                                    setError(message)
+                                                    notify.error(message)
+                                                }}
+                                                onUpdate={updateExistingUser}
+                                                onDelete={deleteExistingUser}
+                                            />
                                         </div>
                                     </TableCell>
                                 </TableRow>
                             )
                         })}
                     </TableBody>
-                </Table>
-                <Pager
-                    page={page}
-                    totalPages={totalPages}
-                    hasPrevious={hasPreviousPage}
-                    hasNext={hasNextPage}
-                    disabled={isLoading}
-                    onPageChange={(nextPage) => setPage(Math.max(1, Math.min(nextPage, totalPages)))}
-                />
-                {isLoading ? <p className='text-sm text-muted-foreground'>Loading users...</p> : null}
-            </CardContent>
-        </Card>
+                    </Table>
+                    <Pager
+                        page={page}
+                        totalPages={totalPages}
+                        hasPrevious={hasPreviousPage}
+                        hasNext={hasNextPage}
+                        disabled={isLoading}
+                        onPageChange={(nextPage) => setPage(Math.max(1, Math.min(nextPage, totalPages)))}
+                    />
+                    {isLoading ? <p className='text-sm text-muted-foreground'>Loading users...</p> : null}
+                </CardContent>
+            </Card>
+        </section>
     )
 }
