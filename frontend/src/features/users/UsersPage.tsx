@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { Pager } from '@/components/common/Pager'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -17,12 +18,19 @@ import {
 } from '@/components/ui/table'
 import { CreateUserModal } from '@/features/users/components/CreateUserModal'
 import { EditUserModal } from '@/features/users/components/EditUserModal'
+import { InviteUserModal } from '@/features/users/components/InviteUserModal'
+import { UsersCsvModal } from '@/features/users/components/UsersCsvModal'
 import {
     ApiError,
+    createUserInvite,
     createUser,
     deleteUser,
+    exportUsersCsv,
+    fetchUserOrders,
     fetchUsers,
+    importUsersCsv,
     updateUserProfile,
+    type Order,
     type PaginatedResponse,
     type User,
 } from '@/lib/api'
@@ -50,6 +58,7 @@ export function UsersPage({ currentUserId }: UsersPageProps) {
     const [isLoading, setIsLoading] = useState(true)
     const [actionKey, setActionKey] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [ordersByUser, setOrdersByUser] = useState<Record<number, Order[]>>({})
 
     const refresh = useCallback(async () => {
         setIsLoading(true)
@@ -159,6 +168,40 @@ export function UsersPage({ currentUserId }: UsersPageProps) {
         }
     }
 
+    const downloadUsersCsv = async () => {
+        await applyAction('users:export', async () => {
+            const csv = await exportUsersCsv()
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.setAttribute('download', 'users.csv')
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(url)
+        }, 'Users exported')
+    }
+
+    const sendInvite = async (email: string) => {
+        await applyAction('users:invite', async () => {
+            await createUserInvite({ email, role: 'customer' })
+        }, 'Invite created')
+    }
+
+    const importUsers = async (file: File) => {
+        await applyAction('users:import', async () => {
+            await importUsersCsv(file)
+        }, 'Users imported')
+    }
+
+    const loadUserOrders = async (userId: number) => {
+        await applyAction(`user:orders:${userId}`, async () => {
+            const payload = await fetchUserOrders(userId, 1, 10)
+            setOrdersByUser((prev) => ({ ...prev, [userId]: payload.results }))
+        }, 'User orders loaded')
+    }
+
     const totalPages = users ? Math.max(1, Math.ceil(users.count / PAGE_SIZE)) : 1
     const isServerPaginated =
         Boolean(users?.next || users?.previous) ||
@@ -180,14 +223,25 @@ export function UsersPage({ currentUserId }: UsersPageProps) {
                     <div>
                         <CardTitle>Users</CardTitle>
                     </div>
-                    <CreateUserModal
-                        isSubmitting={actionKey === 'user:create'}
-                        onValidationError={(message) => {
-                            setError(message)
-                            notify.error(message)
-                        }}
-                        onCreate={createNewUser}
-                    />
+                    <div className='flex items-center gap-2'>
+                        <UsersCsvModal isSubmitting={Boolean(actionKey)} onExport={downloadUsersCsv} onImport={importUsers} />
+                        <InviteUserModal
+                            isSubmitting={actionKey === 'users:invite'}
+                            onValidationError={(message) => {
+                                setError(message)
+                                notify.error(message)
+                            }}
+                            onInvite={sendInvite}
+                        />
+                        <CreateUserModal
+                            isSubmitting={actionKey === 'user:create'}
+                            onValidationError={(message) => {
+                                setError(message)
+                                notify.error(message)
+                            }}
+                            onCreate={createNewUser}
+                        />
+                    </div>
                 </CardHeader>
                 <CardContent className='space-y-4'>
                     <Table>
@@ -232,6 +286,33 @@ export function UsersPage({ currentUserId }: UsersPageProps) {
                                                 onUpdate={updateExistingUser}
                                                 onDelete={deleteExistingUser}
                                             />
+                                            <Button
+                                                size='sm'
+                                                variant='outline'
+                                                disabled={Boolean(actionKey)}
+                                                onClick={() => void loadUserOrders(user.id)}
+                                            >
+                                                Orders
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })}
+                        {visibleUsers.map((user) => {
+                            const userOrders = ordersByUser[user.id]
+                            if (!userOrders?.length) {
+                                return null
+                            }
+                            return (
+                                <TableRow key={`orders-${user.id}`}>
+                                    <TableCell colSpan={6}>
+                                        <div className='rounded-md border bg-muted/20 p-2 text-xs'>
+                                            {userOrders.map((order) => (
+                                                <p key={order.id}>
+                                                    #{order.id} {order.status} {order.currency} {order.total}
+                                                </p>
+                                            ))}
                                         </div>
                                     </TableCell>
                                 </TableRow>

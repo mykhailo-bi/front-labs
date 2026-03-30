@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { ChevronsUpDown, LayoutDashboard, LogOut, Package, ShoppingCart, Users } from 'lucide-react'
+import { ChevronsUpDown, FolderTree, Images, LayoutDashboard, LogOut, Package, ShoppingCart, Users } from 'lucide-react'
 import { APP_PATHS } from '@/app/paths'
 import { ThemeModeToggle } from '@/components/theme/ThemeModeToggle'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -41,6 +41,8 @@ export function AppShell({ user, onLogout }: AppShellProps) {
         { title: 'Users', href: APP_PATHS.USERS, icon: Users },
         { title: 'Products', href: APP_PATHS.PRODUCTS, icon: Package },
         { title: 'Orders', href: APP_PATHS.ORDERS, icon: ShoppingCart },
+        { title: 'Categories', href: APP_PATHS.CATEGORIES, icon: FolderTree },
+        { title: 'Images', href: APP_PATHS.IMAGES, icon: Images },
     ]
     const currentPageTitle =
         navItems.find((item) => location.pathname === item.href || location.pathname.startsWith(`${item.href}/`))?.title ??

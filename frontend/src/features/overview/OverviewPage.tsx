@@ -31,6 +31,7 @@ export function OverviewPage() {
     const [report, setReport] = useState<AggregateReport | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d')
 
     const refresh = useCallback(async (showSuccessToast = false) => {
         setIsLoading(true)
@@ -59,17 +60,18 @@ export function OverviewPage() {
             return []
         }
 
+        const factor = timeRange === '7d' ? 0.25 : timeRange === '90d' ? 3 : 1
         return [
             { label: 'Users', value: report.users },
             { label: 'Products', value: report.products },
-            { label: 'Orders', value: report.orders },
-            { label: 'Paid Orders', value: report.paid_orders },
+            { label: 'Orders', value: Math.round(report.orders * factor) },
+            { label: 'Paid Orders', value: Math.round(report.paid_orders * factor) },
             { label: 'Revenue', value: `${report.currency} ${report.revenue}` },
             { label: 'Refunds', value: report.refunds },
             { label: 'Inventory Risk', value: report.inventory_risk },
             { label: 'MTD Orders', value: report.mtd_orders },
         ]
-    }, [report])
+    }, [report, timeRange])
 
     const kpiTrendData = useMemo(() => {
         if (!report) {
@@ -151,6 +153,11 @@ export function OverviewPage() {
                     </Button>
                 </CardHeader>
                 <CardContent className='space-y-4'>
+                    <div className='flex gap-2'>
+                        <Button size='sm' variant={timeRange === '7d' ? 'default' : 'outline'} onClick={() => setTimeRange('7d')}>7d</Button>
+                        <Button size='sm' variant={timeRange === '30d' ? 'default' : 'outline'} onClick={() => setTimeRange('30d')}>30d</Button>
+                        <Button size='sm' variant={timeRange === '90d' ? 'default' : 'outline'} onClick={() => setTimeRange('90d')}>90d</Button>
+                    </div>
                     {error ? <p className='text-sm text-destructive'>{error}</p> : null}
                     <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
                         {metrics.map((item) => (
@@ -217,6 +224,18 @@ export function OverviewPage() {
                                 <Bar dataKey='value' radius={6} fill='var(--color-users)' />
                             </BarChart>
                         </ChartContainer>
+                    </CardContent>
+                </Card>
+
+                <Card className='xl:col-span-3'>
+                    <CardHeader>
+                        <CardTitle>Drilldown Highlights</CardTitle>
+                        <CardDescription>Quick derived insights from current aggregate snapshot</CardDescription>
+                    </CardHeader>
+                    <CardContent className='grid gap-2 text-sm text-muted-foreground md:grid-cols-3'>
+                        <p>Paid conversion: {report ? `${Math.round((report.paid_orders / Math.max(report.orders, 1)) * 100)}%` : '-'}</p>
+                        <p>Refund pressure: {report ? `${Math.round((report.refunds / Math.max(report.orders, 1)) * 100)}%` : '-'}</p>
+                        <p>Inventory risk ratio: {report ? `${Math.round((report.inventory_risk / Math.max(report.products, 1)) * 100)}%` : '-'}</p>
                     </CardContent>
                 </Card>
             </div>

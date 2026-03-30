@@ -17,12 +17,19 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import {
+    approveOrderRefund,
     ApiError,
     cancelOrder,
     deliverOrder,
+    fetchOrderInvoice,
+    fetchOrderTimeline,
     fetchOrders,
+    markOrderPaid,
+    payOrder,
+    refundOrder,
     shipOrder,
     type Order,
+    type OrderEvent,
     type PaginatedResponse,
 } from '@/lib/api'
 import { notify } from '@/lib/notify'
@@ -45,6 +52,8 @@ export function OrdersPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [actionKey, setActionKey] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
+    const [timelineByOrder, setTimelineByOrder] = useState<Record<number, OrderEvent[]>>({})
+    const [invoiceByOrder, setInvoiceByOrder] = useState<Record<number, string>>({})
 
     const refresh = useCallback(async () => {
         setIsLoading(true)
@@ -117,6 +126,8 @@ export function OrdersPage() {
                             const canShip = ['placed', 'paid'].includes(order.status)
                             const canDeliver = order.status === 'shipped'
                             const canCancel = ['placed', 'paid'].includes(order.status)
+                            const canPay = order.status === 'placed'
+                            const canRefund = ['paid', 'shipped', 'delivered'].includes(order.status)
                             const isBusy = actionKey === key
 
                             return (
@@ -132,6 +143,80 @@ export function OrdersPage() {
                                     <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                                     <TableCell className='text-right'>
                                         <div className='flex justify-end gap-2'>
+                                            <Button
+                                                size='sm'
+                                                variant='outline'
+                                                disabled={isBusy || !canPay}
+                                                onClick={() =>
+                                                    void applyAction(key, async () => {
+                                                        await payOrder(order.id, `pay-${order.id}-${Date.now()}`)
+                                                    })
+                                                }
+                                            >
+                                                Pay
+                                            </Button>
+                                            <Button
+                                                size='sm'
+                                                variant='outline'
+                                                disabled={isBusy || !canPay}
+                                                onClick={() =>
+                                                    void applyAction(key, async () => {
+                                                        await markOrderPaid(order.id, `admin-paid-${order.id}-${Date.now()}`)
+                                                    })
+                                                }
+                                            >
+                                                Mark Paid
+                                            </Button>
+                                            <Button
+                                                size='sm'
+                                                variant='outline'
+                                                disabled={isBusy || !canRefund}
+                                                onClick={() =>
+                                                    void applyAction(key, async () => {
+                                                        await refundOrder(order.id, 'Approved by admin dashboard')
+                                                    })
+                                                }
+                                            >
+                                                Refund Req
+                                            </Button>
+                                            <Button
+                                                size='sm'
+                                                variant='outline'
+                                                disabled={isBusy || !canRefund}
+                                                onClick={() =>
+                                                    void applyAction(key, async () => {
+                                                        await approveOrderRefund(order.id)
+                                                    })
+                                                }
+                                            >
+                                                Refund OK
+                                            </Button>
+                                            <Button
+                                                size='sm'
+                                                variant='outline'
+                                                disabled={isBusy}
+                                                onClick={() =>
+                                                    void applyAction(key, async () => {
+                                                        const payload = await fetchOrderTimeline(order.id)
+                                                        setTimelineByOrder((prev) => ({ ...prev, [order.id]: payload }))
+                                                    })
+                                                }
+                                            >
+                                                Timeline
+                                            </Button>
+                                            <Button
+                                                size='sm'
+                                                variant='outline'
+                                                disabled={isBusy}
+                                                onClick={() =>
+                                                    void applyAction(key, async () => {
+                                                        const payload = await fetchOrderInvoice(order.id)
+                                                        setInvoiceByOrder((prev) => ({ ...prev, [order.id]: payload.invoice }))
+                                                    })
+                                                }
+                                            >
+                                                Invoice
+                                            </Button>
                                             <Button
                                                 size='sm'
                                                 variant='outline'
@@ -168,6 +253,32 @@ export function OrdersPage() {
                                             >
                                                 Cancel
                                             </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })}
+                        {visibleOrders.map((order) => {
+                            const timeline = timelineByOrder[order.id]
+                            const invoice = invoiceByOrder[order.id]
+                            if (!timeline?.length && !invoice) {
+                                return null
+                            }
+                            return (
+                                <TableRow key={`details-${order.id}`}>
+                                    <TableCell colSpan={6}>
+                                        <div className='space-y-3 rounded-md border bg-muted/20 p-3'>
+                                            {invoice ? <pre className='whitespace-pre-wrap text-xs'>{invoice}</pre> : null}
+                                            {timeline?.length ? (
+                                                <div className='space-y-1 text-xs'>
+                                                    {timeline.map((event) => (
+                                                        <p key={event.id}>
+                                                            {new Date(event.created_at).toLocaleString()} - {event.event_type}
+                                                            {event.note ? ` (${event.note})` : ''}
+                                                        </p>
+                                                    ))}
+                                                </div>
+                                            ) : null}
                                         </div>
                                     </TableCell>
                                 </TableRow>

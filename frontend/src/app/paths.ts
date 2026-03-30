@@ -4,4 +4,6 @@ export const APP_PATHS = {
     USERS: '/users',
     PRODUCTS: '/products',
     ORDERS: '/orders',
+    CATEGORIES: '/categories',
+    IMAGES: '/images',
 } as const

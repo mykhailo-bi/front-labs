@@ -3,7 +3,9 @@ import { APP_PATHS } from '@/app/paths'
 import { LoadingView } from '@/components/common/LoadingView'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { CategoriesPage } from '@/features/categories/CategoriesPage'
 import { useSession } from '@/features/auth/useSession'
+import { ImagesPage } from '@/features/images/ImagesPage'
 import { OrdersPage } from '@/features/orders/OrdersPage'
 import { OverviewPage } from '@/features/overview/OverviewPage'
 import { ProductsPage } from '@/features/products/ProductsPage'
@@ -61,6 +63,8 @@ export function AppRoutes() {
                 <Route path={APP_PATHS.USERS} element={<UsersPage currentUserId={session.user.id} />} />
                 <Route path={APP_PATHS.PRODUCTS} element={<ProductsPage />} />
                 <Route path={APP_PATHS.ORDERS} element={<OrdersPage />} />
+                <Route path={APP_PATHS.CATEGORIES} element={<CategoriesPage />} />
+                <Route path={APP_PATHS.IMAGES} element={<ImagesPage />} />
             </Route>
             <Route path='*' element={<Navigate to={APP_PATHS.OVERVIEW} replace />} />
         </Routes>

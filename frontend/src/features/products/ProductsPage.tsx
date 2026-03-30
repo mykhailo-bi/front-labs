@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Pager } from '@/components/common/Pager'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Table,
@@ -12,11 +11,15 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { CreateProductModal } from '@/features/products/components/CreateProductModal'
+import { EditProductModal } from '@/features/products/components/EditProductModal'
+import { ProductsCsvModal } from '@/features/products/components/ProductsCsvModal'
 import {
     ApiError,
-    archiveProduct,
     createProduct,
+    deleteProduct,
     fetchProducts,
+    exportProductsCsv,
+    importProductsCsv,
     setProductImages,
     updateProduct,
     type PaginatedResponse,
@@ -129,6 +132,58 @@ export function ProductsPage() {
     const hasPreviousPage = isServerPaginated ? Boolean(products?.previous) : page > 1
     const hasNextPage = isServerPaginated ? Boolean(products?.next) : page < totalPages
 
+    const exportCsv = async () => {
+        await applyAction('products:export', async () => {
+            const csv = await exportProductsCsv()
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+            link.setAttribute('download', 'products.csv')
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(url)
+        })
+    }
+
+    const importCsv = async (file: File) => {
+        await applyAction('products:import', async () => {
+            await importProductsCsv(file)
+        })
+    }
+
+    const updateExistingProduct = async (
+        id: number,
+        input: {
+            name: string
+            sku?: string
+            description?: string
+            price: string
+            stock_qty: number
+            is_published: boolean
+            image_ids: number[]
+        },
+    ) => {
+        await applyAction(`product:edit:${id}`, async () => {
+            await updateProduct(id, {
+                name: input.name,
+                sku: input.sku ?? null,
+                description: input.description,
+                price: input.price,
+                stock_qty: input.stock_qty,
+                is_published: input.is_published,
+            })
+            await setProductImages(id, input.image_ids)
+        })
+    }
+
+    const deleteExistingProduct = async (id: number) => {
+        await applyAction(`product:delete:${id}`, async () => {
+            await deleteProduct(id)
+        })
+    }
+
     return (
         <section className='space-y-4'>
             {error ? <p className='text-sm text-destructive'>{error}</p> : null}
@@ -138,14 +193,17 @@ export function ProductsPage() {
                     <div>
                         <CardTitle>Products</CardTitle>
                     </div>
-                    <CreateProductModal
-                        isSubmitting={actionKey === 'product:create'}
-                        onValidationError={(message) => {
-                            setError(message)
-                            notify.error(message)
-                        }}
-                        onCreate={createNewProduct}
-                    />
+                    <div className='flex items-center gap-2'>
+                        <ProductsCsvModal isSubmitting={Boolean(actionKey)} onExport={exportCsv} onImport={importCsv} />
+                        <CreateProductModal
+                            isSubmitting={actionKey === 'product:create'}
+                            onValidationError={(message) => {
+                                setError(message)
+                                notify.error(message)
+                            }}
+                            onCreate={createNewProduct}
+                        />
+                    </div>
                 </CardHeader>
                 <CardContent className='space-y-4'>
                     <Table>
@@ -162,8 +220,10 @@ export function ProductsPage() {
                         </TableHeader>
                         <TableBody>
                             {visibleProducts.map((product) => {
-                                const key = `product:${product.id}`
-                                const isBusy = actionKey === key
+                                const isBusy =
+                                    actionKey === `product:edit:${product.id}` ||
+                                    actionKey === `product:delete:${product.id}` ||
+                                    actionKey === 'product:create'
 
                                 return (
                                     <TableRow key={product.id}>
@@ -184,32 +244,16 @@ export function ProductsPage() {
                                         </TableCell>
                                         <TableCell className='text-right'>
                                             <div className='flex justify-end gap-2'>
-                                                <Button
-                                                    size='sm'
-                                                    variant='outline'
-                                                    disabled={isBusy}
-                                                    onClick={() =>
-                                                        void applyAction(key, async () => {
-                                                            await updateProduct(product.id, {
-                                                                is_published: !product.is_published,
-                                                            })
-                                                        })
-                                                    }
-                                                >
-                                                    {product.is_published ? 'Hide' : 'Publish'}
-                                                </Button>
-                                                <Button
-                                                    size='sm'
-                                                    variant='outline'
-                                                    disabled={isBusy || product.status === 'archived'}
-                                                    onClick={() =>
-                                                        void applyAction(key, async () => {
-                                                            await archiveProduct(product.id)
-                                                        })
-                                                    }
-                                                >
-                                                    Archive
-                                                </Button>
+                                                <EditProductModal
+                                                    product={product}
+                                                    isSubmitting={isBusy}
+                                                    onValidationError={(message) => {
+                                                        setError(message)
+                                                        notify.error(message)
+                                                    }}
+                                                    onUpdate={updateExistingProduct}
+                                                    onDelete={deleteExistingProduct}
+                                                />
                                             </div>
                                         </TableCell>
                                     </TableRow>

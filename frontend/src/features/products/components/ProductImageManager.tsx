@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ImagePlus, Loader2, Trash2, Upload } from 'lucide-react'
+import { ImagePlus, Loader2, Trash2, UploadCloud } from 'lucide-react'
+import { UploadDropzone } from '@/components/common/UploadDropzone'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import {
     ApiError,
     fetchImage,
     fetchImages,
-    type ImageAsset,
     uploadImage,
+    type ImageAsset,
 } from '@/lib/api'
 import { notify } from '@/lib/notify'
 
@@ -28,7 +28,7 @@ function parseErrorMessage(error: unknown): string {
     return 'Unexpected error'
 }
 
-function resolveImageUrl(url: string): string {
+export function resolveImageUrl(url: string): string {
     if (url.startsWith('http://') || url.startsWith('https://')) {
         return url
     }
@@ -59,7 +59,6 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
 
     const [isSaving, setIsSaving] = useState(false)
     const [removingImageId, setRemovingImageId] = useState<number | null>(null)
-    const [uploadError, setUploadError] = useState<string | null>(null)
     const [isUploading, setIsUploading] = useState(false)
 
     useEffect(() => {
@@ -151,13 +150,18 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
         }
     }
 
-    const handleUpload = async (file: File | null) => {
-        if (!file) {
-            return
+    const handleRemove = async (imageId: number) => {
+        setRemovingImageId(imageId)
+        try {
+            await onChange(imageIds.filter((id) => id !== imageId))
+            notify.success('Image removed from product')
+        } finally {
+            setRemovingImageId(null)
         }
+    }
 
+    const handleUpload = async (file: File) => {
         setIsUploading(true)
-        setUploadError(null)
         try {
             const created = await uploadImage(file)
             setLibraryImages((prev) => [created, ...prev])
@@ -166,20 +170,9 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
             notify.success('Image uploaded and linked')
         } catch (error) {
             const message = parseErrorMessage(error)
-            setUploadError(message)
             notify.error(message)
         } finally {
             setIsUploading(false)
-        }
-    }
-
-    const handleRemove = async (imageId: number) => {
-        setRemovingImageId(imageId)
-        try {
-            await onChange(imageIds.filter((id) => id !== imageId))
-            notify.success('Image removed from product')
-        } finally {
-            setRemovingImageId(null)
         }
     }
 
@@ -237,16 +230,14 @@ export function ProductImageManager({ imageIds, disabled = false, onChange }: Pr
                         <div className='flex min-h-0 flex-1 flex-col gap-4'>
                             <div className='rounded-lg border p-3'>
                                 <p className='mb-2 text-sm font-medium'>Upload New</p>
-                                <div className='flex items-center gap-2'>
-                                    <Input
-                                        type='file'
-                                        accept='image/png,image/jpeg,image/webp,image/gif'
-                                        onChange={(event) => void handleUpload(event.target.files?.[0] ?? null)}
-                                        disabled={isUploading || isSaving}
-                                    />
-                                    {isUploading ? <Loader2 className='size-4 animate-spin text-muted-foreground' /> : <Upload className='size-4 text-muted-foreground' />}
-                                </div>
-                                {uploadError ? <p className='mt-2 text-sm text-destructive'>{uploadError}</p> : null}
+                                <UploadDropzone
+                                    icon={<UploadCloud className='size-4' />}
+                                    title='Product Image Upload'
+                                    description='This uploader accepts product image files (PNG, JPEG, WEBP, GIF) to add them to the image library.'
+                                    accept='image/png,image/jpeg,image/webp,image/gif'
+                                    disabled={isUploading || isSaving}
+                                    onFileSelected={handleUpload}
+                                />
                             </div>
 
                             <div className='flex min-h-0 flex-1 flex-col rounded-lg border p-3'>
