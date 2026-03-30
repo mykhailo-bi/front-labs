@@ -19,7 +19,6 @@ class SimpleJWTAuthenticationTests:
             username="jwt_user",
             email="jwt_user@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.auth = auth_module.SimpleJWTAuthentication()
 
@@ -78,7 +77,8 @@ class SimpleJWTAuthenticationTests:
                 self.auth.get_user(token)
 
         with mock.patch(
-            "backend_app.auth.models.User.objects.get", side_effect=models.User.DoesNotExist
+            "backend_app.auth.models.User.objects.get",
+            side_effect=models.User.DoesNotExist,
         ):
             with pytest.raises(drf_exc.AuthenticationFailed):
                 self.auth.get_user(token)

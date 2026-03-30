@@ -87,18 +87,21 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "backend_app.apps.BackendAppConfig",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "backend_app.middleware.RequestIdMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
 ]
 
 ROOT_URLCONF = "backend_project.urls"
+CORS_ALLOW_ALL_ORIGINS = True
 
 TEMPLATES = [
     {
@@ -136,7 +139,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     # API quality defaults
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "backend_app.pagination.DefaultPageNumberPagination",
     "PAGE_SIZE": int(os.getenv("API_PAGE_SIZE", "20")),
     "DEFAULT_FILTER_BACKENDS": [
         "rest_framework.filters.SearchFilter",

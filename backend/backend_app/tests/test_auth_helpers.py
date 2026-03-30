@@ -19,7 +19,6 @@ class AuthHelperTests:
             username="authh_user",
             email="authh@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
 
     def test_refresh_access_token_token_error_raises_auth_failed(self):
@@ -41,13 +40,15 @@ class AuthHelperTests:
                 auth_module.refresh_access_token(refresh_token=pair.refresh)
 
         with mock.patch(
-            "backend_app.auth.RefreshToken.get", side_effect=["bad", "bad", "jti", "iat"]
+            "backend_app.auth.RefreshToken.get",
+            side_effect=["bad", "bad", "jti", "iat"],
         ):
             with pytest.raises(drf_exc.AuthenticationFailed):
                 auth_module.refresh_access_token(refresh_token=pair.refresh)
 
         with mock.patch(
-            "backend_app.auth.models.User.objects.get", side_effect=models.User.DoesNotExist
+            "backend_app.auth.models.User.objects.get",
+            side_effect=models.User.DoesNotExist,
         ):
             with pytest.raises(drf_exc.AuthenticationFailed):
                 auth_module.refresh_access_token(refresh_token=pair.refresh)
@@ -74,7 +75,8 @@ class AuthHelperTests:
     def test_refresh_access_token_user_not_found_branch(self):
         pair = issue_token_pair(user=self.user)
         with mock.patch(
-            "backend_app.auth.models.User.objects.get", side_effect=models.User.DoesNotExist
+            "backend_app.auth.models.User.objects.get",
+            side_effect=models.User.DoesNotExist,
         ):
             with pytest.raises(drf_exc.AuthenticationFailed):
                 auth_module.refresh_access_token(refresh_token=pair.refresh)

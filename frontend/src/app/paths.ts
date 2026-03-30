@@ -1,0 +1,18 @@
+export const APP_PATHS = {
+    LOGIN: '/login',
+    REGISTER: '/register',
+    FORGOT_PASSWORD: '/forgot-password',
+    ERROR_400: '/error/400',
+    ERROR_403: '/error/403',
+    ERROR_404: '/error/404',
+    ERROR_409: '/error/409',
+    ERROR_429: '/error/429',
+    ERROR_500: '/error/500',
+    ERROR_503: '/error/503',
+    OVERVIEW: '/admin/overview',
+    USERS: '/admin/users',
+    PRODUCTS: '/admin/products',
+    ORDERS: '/admin/orders',
+    CATEGORIES: '/admin/categories',
+    IMAGES: '/admin/images',
+} as const

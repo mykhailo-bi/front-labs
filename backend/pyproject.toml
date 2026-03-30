@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   "Django>=4.2,<5.0",
+  "django-cors-headers>=4.4",
   "djangorestframework>=3.15",
   "djangorestframework-simplejwt>=5.3",
   "drf-spectacular>=0.27",

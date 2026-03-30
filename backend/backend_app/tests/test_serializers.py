@@ -16,13 +16,11 @@ class SerializerValidationTests:
             username="ser_user1",
             email="ser1@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.user2 = models.User.objects.create(
             username="ser_user2",
             email="ser2@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.product = models.Product.objects.create(
             name="SerProd",
@@ -236,7 +234,7 @@ class SerializerValidationTests:
             username="ser_admin",
             email="ser_admin@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=True,
+            role="admin",
         )
 
         ser_admin = OrderSerializer(
@@ -384,10 +382,10 @@ class SerializerValidationTests:
             username="ser_other",
             email="ser_other@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         with mock.patch(
-            "backend_app.serializers.models.WishlistItem.objects.create", side_effect=IntegrityError
+            "backend_app.serializers.models.WishlistItem.objects.create",
+            side_effect=IntegrityError,
         ):
             wish_err = WishlistItemSerializer(
                 data={"product_id": self.product.id, "user_id": other.id},
@@ -413,7 +411,8 @@ class SerializerValidationTests:
         assert "product_id" in saved_dup.errors
 
         with mock.patch(
-            "backend_app.serializers.models.SavedItem.objects.create", side_effect=IntegrityError
+            "backend_app.serializers.models.SavedItem.objects.create",
+            side_effect=IntegrityError,
         ):
             saved_err = SavedItemSerializer(
                 data={"product_id": self.product.id, "user_id": other.id},
@@ -480,7 +479,8 @@ class SerializerValidationTests:
             is_published=True,
         )
         ser = ReviewSerializer(
-            data={"product_id": product.id, "rating": 6, "text": "x"}, context=self._ctx(self.user)
+            data={"product_id": product.id, "rating": 6, "text": "x"},
+            context=self._ctx(self.user),
         )
         assert not ser.is_valid()
         assert "rating" in ser.errors

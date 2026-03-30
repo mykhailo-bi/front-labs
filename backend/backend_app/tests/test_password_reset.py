@@ -17,7 +17,6 @@ class PasswordResetTests:
             username="pw_user",
             email="pw_user@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
 
     def test_password_reset_request_deletes_expired_and_creates_token(self):

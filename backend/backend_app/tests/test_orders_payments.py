@@ -18,21 +18,19 @@ class OrderPaymentTests:
             username="admin_orders",
             email="admin_orders@example.com",
             password_hash=hash_password("adminpass123"),
-            is_admin=True,
+            role="admin",
         )
         self.admin_token = issue_token_pair(user=self.admin).access
         self.user = models.User.objects.create(
             username="order_user",
             email="order_user@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.user_token = issue_token_pair(user=self.user).access
         self.other_user = models.User.objects.create(
             username="order_other",
             email="order_other@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.product = models.Product.objects.create(
             name="OrderProd",
@@ -103,7 +101,10 @@ class OrderPaymentTests:
         assert res_ship.data["status"] == OrderStatus.SHIPPED
 
         res_deliver = self.client.post(
-            f"/api/v1/orders/{order.id}/deliver/", {}, format="json", **self._auth_admin()
+            f"/api/v1/orders/{order.id}/deliver/",
+            {},
+            format="json",
+            **self._auth_admin(),
         )
         assert res_deliver.status_code == 200
         assert res_deliver.data["status"] == OrderStatus.DELIVERED
@@ -118,7 +119,10 @@ class OrderPaymentTests:
     def test_deliver_invalid_transition_returns_409(self):
         order = models.Order.objects.create(user=self.user, status=OrderStatus.PLACED)
         res_deliver = self.client.post(
-            f"/api/v1/orders/{order.id}/deliver/", {}, format="json", **self._auth_admin()
+            f"/api/v1/orders/{order.id}/deliver/",
+            {},
+            format="json",
+            **self._auth_admin(),
         )
         assert res_deliver.status_code == 409
 
@@ -352,7 +356,6 @@ class OrderPaymentTests:
             (),
             {
                 "id": "not-int",
-                "is_admin": False,
                 "__int__": lambda self: 0,
             },
         )()

@@ -6,7 +6,10 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("backend_app", "0003_order_cancelled_at_order_currency_order_delivered_at_and_more"),
+        (
+            "backend_app",
+            "0003_order_cancelled_at_order_currency_order_delivered_at_and_more",
+        ),
     ]
 
     operations = [

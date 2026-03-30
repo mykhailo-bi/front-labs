@@ -18,28 +18,50 @@ class OpenApiAndAdminTests:
         site = admin_module.admin_site
 
         admin_user = type(
-            "U", (), {"is_admin": True, "is_staff": False, "is_superuser": False, "is_active": True}
+            "U",
+            (),
+            {
+                "role": "admin",
+                "is_staff": False,
+                "is_superuser": False,
+                "is_active": True,
+            },
         )()
         assert site.has_permission(request=type("R", (), {"user": admin_user})())
 
         staff_user = type(
             "U",
             (),
-            {"is_admin": False, "is_staff": True, "is_superuser": False, "is_active": True},
+            {
+                "role": "customer",
+                "is_staff": True,
+                "is_superuser": False,
+                "is_active": True,
+            },
         )()
         assert site.has_permission(request=type("R", (), {"user": staff_user})())
 
         superuser = type(
             "U",
             (),
-            {"is_admin": False, "is_staff": False, "is_superuser": True, "is_active": True},
+            {
+                "role": "customer",
+                "is_staff": False,
+                "is_superuser": True,
+                "is_active": True,
+            },
         )()
         assert site.has_permission(request=type("R", (), {"user": superuser})())
 
         inactive = type(
             "U",
             (),
-            {"is_admin": False, "is_staff": True, "is_superuser": False, "is_active": False},
+            {
+                "role": "customer",
+                "is_staff": True,
+                "is_superuser": False,
+                "is_active": False,
+            },
         )()
         assert not site.has_permission(request=type("R", (), {"user": inactive})())
 
@@ -51,12 +73,12 @@ class OpenApiAndAdminTests:
         assert api_module.IsAdminOrReadOnly().has_permission(request, None)
 
         request_post = type(
-            "R", (), {"method": "POST", "user": type("U", (), {"is_admin": False})()}
+            "R", (), {"method": "POST", "user": type("U", (), {"role": "customer"})()}
         )()
         assert not api_module.IsAdminOrReadOnly().has_permission(request_post, None)
 
         request_admin = type(
-            "R", (), {"method": "POST", "user": type("U", (), {"is_admin": True})()}
+            "R", (), {"method": "POST", "user": type("U", (), {"role": "admin"})()}
         )()
         assert api_module.IsAdminOrReadOnly().has_permission(request_admin, None)
 
@@ -67,11 +89,11 @@ class OpenApiAndAdminTests:
             type("R", (), {"user": object()})(), None
         )
         assert api_module.IsAdmin().has_permission(
-            type("R", (), {"user": type("U", (), {"is_admin": True})()})(), None
+            type("R", (), {"user": type("U", (), {"role": "admin"})()})(), None
         )
 
         obj = type("Obj", (), {"user_id": 1})()
-        req_owner = type("R", (), {"user": type("U", (), {"id": 1, "is_admin": False})()})()
-        req_other = type("R", (), {"user": type("U", (), {"id": 2, "is_admin": False})()})()
+        req_owner = type("R", (), {"user": type("U", (), {"id": 1, "role": "customer"})()})()
+        req_other = type("R", (), {"user": type("U", (), {"id": 2, "role": "customer"})()})()
         assert api_module.IsOwnerOrAdmin().has_object_permission(req_owner, None, obj)
         assert not api_module.IsOwnerOrAdmin().has_object_permission(req_other, None, obj)

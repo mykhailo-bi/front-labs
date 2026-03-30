@@ -7,7 +7,10 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("backend_app", "0007_address_blacklistedtoken_category_passwordresettoken_and_more"),
+        (
+            "backend_app",
+            "0007_address_blacklistedtoken_category_passwordresettoken_and_more",
+        ),
     ]
 
     operations = [
@@ -27,7 +30,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("token", models.CharField(max_length=64, unique=True)),
@@ -37,7 +43,8 @@ class Migration(migrations.Migration):
                 (
                     "user",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="backend_app.user"
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="backend_app.user",
                     ),
                 ),
             ],

@@ -23,7 +23,6 @@ class Cart(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-
         db_table = "cart"
         unique_together = (("user", "product"),)
         indexes = [models.Index(fields=["user"], name="cart_user_idx")]
@@ -31,11 +30,16 @@ class Cart(models.Model):
 
 class Image(models.Model):
     url = models.CharField(max_length=1024)
+    alt_text = models.CharField(max_length=255, blank=True, null=True)
+    title = models.CharField(max_length=255, blank=True, null=True)
+    caption = models.CharField(max_length=512, blank=True, null=True)
+    filename = models.CharField(max_length=255, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    aria_label = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-
         db_table = "image"
 
 
@@ -99,7 +103,6 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-
         db_table = "order"
         constraints = [
             models.UniqueConstraint(
@@ -117,7 +120,6 @@ class OrderContent(models.Model):
     count = models.IntegerField()
 
     class Meta:
-
         db_table = "order_content"
         unique_together = (("order", "product"),)
         indexes = [
@@ -154,13 +156,13 @@ class Product(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-
         db_table = "product"
         constraints = [
             CheckConstraint(check=Q(stock_qty__gte=0), name="product_stock_qty_gte_0"),
             CheckConstraint(check=Q(reserved_qty__gte=0), name="product_reserved_qty_gte_0"),
             CheckConstraint(
-                check=Q(reserved_qty__lte=models.F("stock_qty")), name="product_reserved_le_stock"
+                check=Q(reserved_qty__lte=models.F("stock_qty")),
+                name="product_reserved_le_stock",
             ),
         ]
         indexes = [
@@ -178,7 +180,6 @@ class ProductImage(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-
         db_table = "product_image"
         unique_together = (("product", "image"),)
 
@@ -191,7 +192,6 @@ class Review(models.Model):
     images = models.ManyToManyField(Image, through="ReviewImage")
 
     class Meta:
-
         db_table = "review"
         unique_together = (("user", "product"),)
         constraints = [
@@ -209,7 +209,6 @@ class ReviewImage(models.Model):
     image = models.ForeignKey(Image, models.PROTECT)
 
     class Meta:
-
         db_table = "review_image"
         unique_together = (("review", "image"),)
 
@@ -223,7 +222,6 @@ class User(models.Model):
     lastname = models.CharField(max_length=32, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     phone = models.CharField(unique=True, max_length=16, blank=True, null=True)
-    is_admin = models.BooleanField(default=False)
     role = models.CharField(
         max_length=16,
         default="customer",
@@ -253,7 +251,6 @@ class User(models.Model):
     products_in_cart = models.ManyToManyField("Product", through="Cart")
 
     class Meta:
-
         db_table = "user"
 
     # Compatibility with DRF/Django expectations.
@@ -270,11 +267,11 @@ class User(models.Model):
     # Django admin/session compatibility helpers
     @property
     def is_staff(self) -> bool:
-        return bool(self.is_admin)
+        return self.role == "admin"
 
     @property
     def is_superuser(self) -> bool:
-        return bool(self.is_admin)
+        return self.role == "admin"
 
     @property
     def is_active(self) -> bool:

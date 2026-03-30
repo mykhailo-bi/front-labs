@@ -16,7 +16,7 @@ class ProductFiltersAndImagesTests:
             username="admin_filters",
             email="admin_filters@example.com",
             password_hash=hash_password("adminpass123"),
-            is_admin=True,
+            role="admin",
         )
         self.admin_token = issue_token_pair(user=self.admin).access
         self.cat1 = models.Category.objects.create(name="Cat1", slug="cat1")

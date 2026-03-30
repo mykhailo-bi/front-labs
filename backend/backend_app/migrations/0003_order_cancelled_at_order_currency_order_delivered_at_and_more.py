@@ -97,18 +97,28 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("provider", models.CharField(default="stub", max_length=32)),
                 ("status", models.CharField(default="succeeded", max_length=16)),
-                ("reference_id", models.CharField(blank=True, max_length=64, null=True)),
-                ("idempotency_key", models.CharField(blank=True, max_length=64, null=True)),
+                (
+                    "reference_id",
+                    models.CharField(blank=True, max_length=64, null=True),
+                ),
+                (
+                    "idempotency_key",
+                    models.CharField(blank=True, max_length=64, null=True),
+                ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
                     "order",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.DO_NOTHING, to="backend_app.order"
+                        on_delete=django.db.models.deletion.DO_NOTHING,
+                        to="backend_app.order",
                     ),
                 ),
             ],

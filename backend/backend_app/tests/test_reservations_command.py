@@ -19,7 +19,6 @@ class ReservationExpiryCommandTests:
             username="u1",
             email="u1@example.com",
             password_hash=hash_password("secret1234"),
-            is_admin=False,
         )
         self.product = models.Product.objects.create(
             name="P",

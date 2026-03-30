@@ -12,7 +12,10 @@ from backend_app.security import hash_password, verify_password
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, allow_blank=False)
     avatar_id = serializers.PrimaryKeyRelatedField(
-        source="avatar", queryset=models.Image.objects.all(), allow_null=True, required=False
+        source="avatar",
+        queryset=models.Image.objects.all(),
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
@@ -26,7 +29,6 @@ class UserSerializer(serializers.ModelSerializer):
             "lastname",
             "description",
             "phone",
-            "is_admin",
             "role",
             "status",
             "is_email_verified",
@@ -37,7 +39,6 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
-            "is_admin",
             "created_at",
             "updated_at",
         ]
@@ -132,7 +133,6 @@ class RegisterSerializer(serializers.Serializer):
         password = validated_data.pop("password")
         user = models.User.objects.create(
             **validated_data,
-            is_admin=False,
             password_hash=hash_password(password),
             is_email_verified=False,
         )
@@ -180,7 +180,10 @@ class TokenRefreshSerializer(serializers.Serializer):
 class ProductSerializer(serializers.ModelSerializer):
     image_ids = serializers.PrimaryKeyRelatedField(source="images", many=True, read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
-        source="category", queryset=models.Category.objects.all(), allow_null=True, required=False
+        source="category",
+        queryset=models.Category.objects.all(),
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
@@ -202,7 +205,13 @@ class ProductSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "reserved_qty", "image_ids", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "reserved_qty",
+            "image_ids",
+            "created_at",
+            "updated_at",
+        ]
 
     def validate_sku(self, value):
         if value is None or value == "":
@@ -316,7 +325,7 @@ class OrderSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not request or not request.user:
             return attrs
-        if getattr(request.user, "is_admin", False):
+        if getattr(request.user, "role", None) == "admin":
             return attrs
 
         # Non-admins cannot create/update orders for other users.
@@ -371,7 +380,10 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 class CategorySerializer(serializers.ModelSerializer):
     parent_id = serializers.PrimaryKeyRelatedField(
-        source="parent", queryset=models.Category.objects.all(), allow_null=True, required=False
+        source="parent",
+        queryset=models.Category.objects.all(),
+        allow_null=True,
+        required=False,
     )
 
     class Meta:
@@ -407,7 +419,7 @@ class AddressSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         request = self.context.get("request")
-        if request and not getattr(request.user, "is_admin", False):
+        if request and getattr(request.user, "role", None) != "admin":
             attrs["user"] = request.user
         if attrs.get("is_default"):
             # Ensure only one default per user
@@ -443,7 +455,7 @@ class WishlistItemSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get("request")
         user = attrs.get("user")
-        if request and not getattr(request.user, "is_admin", False):
+        if request and getattr(request.user, "role", None) != "admin":
             user = request.user
             attrs["user"] = user
         product = attrs.get("product")
@@ -499,7 +511,7 @@ class SavedItemSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get("request")
         user = attrs.get("user")
-        if request and not getattr(request.user, "is_admin", False):
+        if request and getattr(request.user, "role", None) != "admin":
             user = request.user
             attrs["user"] = user
         product = attrs.get("product")
@@ -534,7 +546,18 @@ class SavedItemSerializer(serializers.ModelSerializer):
 class ImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Image
-        fields = ["id", "url", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "url",
+            "alt_text",
+            "title",
+            "caption",
+            "filename",
+            "description",
+            "aria_label",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
 
@@ -656,7 +679,15 @@ class RefundRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.RefundRequest
-        fields = ["id", "order_id", "user_id", "reason", "status", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "order_id",
+            "user_id",
+            "reason",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "status", "created_at", "updated_at", "user_id"]
 
 
@@ -680,7 +711,15 @@ class CustomerMarkPaidSerializer(serializers.Serializer):
 class UserInviteSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.UserInvite
-        fields = ["id", "email", "role", "token", "expires_at", "accepted_at", "created_at"]
+        fields = [
+            "id",
+            "email",
+            "role",
+            "token",
+            "expires_at",
+            "accepted_at",
+            "created_at",
+        ]
         read_only_fields = ["id", "token", "accepted_at", "created_at"]
 
 

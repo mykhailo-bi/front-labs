@@ -1,5 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
+from pathlib import Path
+from urllib.parse import urlparse
 from uuid import uuid4
 import csv
 from io import StringIO
@@ -13,7 +15,12 @@ from django.db.utils import IntegrityError
 from django.utils import timezone
 
 from rest_framework import routers, status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
+from rest_framework.decorators import (
+    action,
+    api_view,
+    permission_classes,
+    throttle_classes,
+)
 from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import SAFE_METHODS, BasePermission
@@ -71,12 +78,12 @@ from backend_app.serializers import (
 
 
 class IsAdminOrReadOnly(BasePermission):
-    """Public reads; only admin users (backend_app.User.is_admin) can write."""
+    """Public reads; only users with role=admin can write."""
 
     def has_permission(self, request, view) -> bool:
         if request.method in SAFE_METHODS:
             return True
-        return bool(request.user and getattr(request.user, "is_admin", False))
+        return bool(request.user and getattr(request.user, "role", None) == "admin")
 
 
 class IsAuthenticated(BasePermission):
@@ -86,14 +93,14 @@ class IsAuthenticated(BasePermission):
 
 class IsAdmin(BasePermission):
     def has_permission(self, request, view) -> bool:
-        return bool(request.user and getattr(request.user, "is_admin", False))
+        return bool(request.user and getattr(request.user, "role", None) == "admin")
 
 
 class IsOwnerOrAdmin(BasePermission):
     """Object-level: allow admins; otherwise allow owners (obj.user == request.user)."""
 
     def has_object_permission(self, request, view, obj) -> bool:
-        if request.user and getattr(request.user, "is_admin", False):
+        if request.user and getattr(request.user, "role", None) == "admin":
             return True
         return bool(request.user and getattr(obj, "user_id", None) == request.user.id)
 
@@ -257,6 +264,8 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     # User admin endpoints. Customer registration/login is done via /auth/*.
     permission_classes = [IsAdmin]
+    ordering_fields = ["created_at", "updated_at", "id", "username", "email"]
+    ordering = ["-created_at"]
 
     @extend_schema(
         tags=["orders", "users"],
@@ -272,7 +281,12 @@ class UserViewSet(viewsets.ModelViewSet):
             404: OpenApiResponse(description="User not found"),
         },
     )
-    @action(detail=True, methods=["get"], url_path="orders", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="orders",
+        permission_classes=[IsAuthenticated],
+    )
     def orders(self, request, pk=None):
         """List orders for a specific user.
 
@@ -285,8 +299,8 @@ class UserViewSet(viewsets.ModelViewSet):
         except (TypeError, ValueError):
             return Response({"detail": "Invalid user id"}, status=status.HTTP_400_BAD_REQUEST)
 
-        is_admin = bool(request.user and getattr(request.user, "is_admin", False))
-        if not is_admin and request.user.id != user_id:
+        is_role_admin = bool(request.user and getattr(request.user, "role", None) == "admin")
+        if not is_role_admin and request.user.id != user_id:
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         target = models.User.objects.filter(id=user_id).first()
@@ -343,7 +357,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 "phone",
                 "role",
                 "status",
-                "is_admin",
                 "is_email_verified",
             ]
         )
@@ -358,7 +371,6 @@ class UserViewSet(viewsets.ModelViewSet):
                     user.phone or "",
                     user.role,
                     user.status,
-                    int(user.is_admin),
                     int(user.is_email_verified),
                 ]
             )
@@ -402,7 +414,8 @@ class UserViewSet(viewsets.ModelViewSet):
         for idx, row in enumerate(reader, start=1):
             if max_rows >= 0 and idx > max_rows:
                 return Response(
-                    {"detail": "CSV row limit exceeded."}, status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "CSV row limit exceeded."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             email = (row.get("email") or "").strip()
             if not email:
@@ -418,7 +431,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 "phone": row.get("phone") or None,
                 "role": row.get("role") or "customer",
                 "status": row.get("status") or "active",
-                "is_admin": bool(int(row.get("is_admin") or 0)),
                 "is_email_verified": bool(int(row.get("is_email_verified") or 0)),
                 "password_hash": password_hash,
             }
@@ -430,7 +442,11 @@ class UserViewSet(viewsets.ModelViewSet):
                 updated += int(not created_flag)
             except IntegrityError:
                 errors.append(
-                    {"row": idx, "email": email, "detail": "Unique constraint violation."}
+                    {
+                        "row": idx,
+                        "email": email,
+                        "detail": "Unique constraint violation.",
+                    }
                 )
 
         if errors:
@@ -468,7 +484,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         # Public catalog only shows active products.
         user = getattr(self.request, "user", None)
-        if not user or not getattr(user, "is_admin", False):
+        if not user or getattr(user, "role", None) != "admin":
             qs = qs.filter(status="active", is_published=True)
 
         category = self.request.query_params.get("category")
@@ -581,7 +597,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         for idx, row in enumerate(reader, start=1):
             if max_rows >= 0 and idx > max_rows:
                 return Response(
-                    {"detail": "CSV row limit exceeded."}, status=status.HTTP_400_BAD_REQUEST
+                    {"detail": "CSV row limit exceeded."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             sku = (row.get("sku") or "").strip() or None
             defaults = {
@@ -633,7 +650,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         request=SetProductImagesSerializer,
         responses={200: ProductSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="images/set", permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="images/set",
+        permission_classes=[IsAdmin],
+    )
     def set_images(self, request, pk=None):
         """Replace all product image associations.
 
@@ -645,7 +667,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         image_ids = request.data.get("image_ids")
         if not isinstance(image_ids, list):
             return Response(
-                {"image_ids": "Must be a list of IDs."}, status=status.HTTP_400_BAD_REQUEST
+                {"image_ids": "Must be a list of IDs."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Normalize to ints and reject duplicates up-front to avoid DB unique violations.
@@ -666,7 +689,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         images = list(models.Image.objects.filter(id__in=image_ids_int))
         if len(images) != len(set(image_ids_int)):
             return Response(
-                {"image_ids": "One or more images not found."}, status=status.HTTP_400_BAD_REQUEST
+                {"image_ids": "One or more images not found."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         with transaction.atomic():
@@ -683,7 +707,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         request=ProductImageAltTextSerializer,
         responses={200: ProductSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="images/alt-text", permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="images/alt-text",
+        permission_classes=[IsAdmin],
+    )
     def set_image_alt_text(self, request, pk=None):
         product = self.get_object()
         serializer = ProductImageAltTextSerializer(data=request.data)
@@ -695,7 +724,8 @@ class ProductViewSet(viewsets.ModelViewSet):
             product_image = models.ProductImage.objects.get(product=product, image_id=image_id)
         except models.ProductImage.DoesNotExist:
             return Response(
-                {"detail": "Image not associated with product."}, status=status.HTTP_404_NOT_FOUND
+                {"detail": "Image not associated with product."},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         product_image.alt_text = alt_text
@@ -723,7 +753,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user:
             return qs.none()
-        if getattr(user, "is_admin", False):
+        if getattr(user, "role", None) == "admin":
             return qs
         return qs.filter(user=user)
 
@@ -775,7 +805,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         request=None,
         responses={200: OrderSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="refund-approve", permission_classes=[IsAdmin])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="refund-approve",
+        permission_classes=[IsAdmin],
+    )
     def admin_refund(self, request, pk=None):
         order = self.get_object()
         models.OrderEvent.objects.create(order=order, event_type="refund_approved")
@@ -791,21 +826,30 @@ class OrderViewSet(viewsets.ModelViewSet):
         tags=["orders"],
         summary="Cancel order (customer)",
         description="Allow a customer to cancel their own placed order before it is paid/shipped.",
-        responses={200: OrderSerializer, 400: OpenApiResponse(description="Invalid state")},
+        responses={
+            200: OrderSerializer,
+            400: OpenApiResponse(description="Invalid state"),
+        },
     )
-    @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="cancel",
+        permission_classes=[IsAuthenticated],
+    )
     def cancel(self, request, pk=None):
         try:
             order = models.Order.objects.get(pk=pk)
         except models.Order.DoesNotExist:
             return Response({"detail": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if not (getattr(request.user, "is_admin", False) or order.user_id == request.user.id):
+        if not (getattr(request.user, "role", None) == "admin" or order.user_id == request.user.id):
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         if not can_transition(from_status=order.status, to_status=OrderStatus.CANCELLED):
             return Response(
-                {"detail": "Cannot cancel in current status"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Cannot cancel in current status"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if order.status == OrderStatus.CANCELLED:
@@ -849,7 +893,12 @@ class OrderViewSet(viewsets.ModelViewSet):
             404: OpenApiResponse(description="Order not found"),
         },
     )
-    @action(detail=True, methods=["post"], url_path="pay", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="pay",
+        permission_classes=[IsAuthenticated],
+    )
     def pay(self, request, pk=None):
         serializer = CustomerMarkPaidSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -942,10 +991,15 @@ class OrderViewSet(viewsets.ModelViewSet):
         description="Return a minimal text invoice for the order.",
         responses={200: OpenApiResponse(description="Invoice text")},
     )
-    @action(detail=True, methods=["get"], url_path="invoice", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="invoice",
+        permission_classes=[IsAuthenticated],
+    )
     def invoice(self, request, pk=None):
         order = self.get_object()
-        if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
+        if order.user_id != request.user.id and getattr(request.user, "role", None) != "admin":
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
 
         content = (
@@ -965,7 +1019,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         request=RefundRequestSerializer,
         responses={201: RefundRequestSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="refund", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="refund",
+        permission_classes=[IsAuthenticated],
+    )
     def refund(self, request, pk=None):
         order = self.get_object()
         if order.user_id != request.user.id:
@@ -988,10 +1047,15 @@ class OrderViewSet(viewsets.ModelViewSet):
         summary="List order timeline",
         responses={200: OrderEventSerializer(many=True)},
     )
-    @action(detail=True, methods=["get"], url_path="timeline", permission_classes=[IsAuthenticated])
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="timeline",
+        permission_classes=[IsAuthenticated],
+    )
     def timeline(self, request, pk=None):
         order = self.get_object()
-        if order.user_id != request.user.id and not getattr(request.user, "is_admin", False):
+        if order.user_id != request.user.id and getattr(request.user, "role", None) != "admin":
             return Response({"detail": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
         events = models.OrderEvent.objects.filter(order=order).order_by("created_at")
         return Response(OrderEventSerializer(events, many=True).data)
@@ -1012,7 +1076,7 @@ class AddressViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = models.Address.objects.all()
-        if not user or not getattr(user, "is_admin", False):
+        if not user or getattr(user, "role", None) != "admin":
             qs = qs.filter(user=user)
         return qs.order_by("-is_default", "-updated_at")
 
@@ -1061,6 +1125,31 @@ class ImageViewSet(viewsets.ModelViewSet):
     queryset = models.Image.objects.all()
     serializer_class = ImageSerializer
     permission_classes = [IsAdmin]
+
+    def _storage_name_from_url(self, image_url: str) -> str | None:
+        media_url = str(getattr(settings, "MEDIA_URL", "/media/") or "/media/")
+        media_prefix = media_url.rstrip("/") + "/"
+
+        parsed = urlparse(image_url)
+        path = parsed.path or image_url
+        normalized_path = path.lstrip("/")
+
+        media_prefix_no_slash = media_prefix.lstrip("/")
+        if normalized_path.startswith(media_prefix_no_slash):
+            return normalized_path[len(media_prefix_no_slash) :]
+
+        return None
+
+    def perform_destroy(self, instance):
+        storage_name = self._storage_name_from_url(instance.url)
+        super().perform_destroy(instance)
+
+        if storage_name:
+            try:
+                default_storage.delete(storage_name)
+            except Exception:
+                # Preserve API success even if storage cleanup fails.
+                pass
 
     @extend_schema(
         tags=["images"],
@@ -1127,7 +1216,10 @@ class ImageViewSet(viewsets.ModelViewSet):
         relative_url = f"{media_url.rstrip('/')}/{saved_name.lstrip('/')}"
 
         # Store relative URL; frontend can prefix with API host if needed.
-        img = models.Image.objects.create(url=relative_url)
+        original_name = (getattr(upload, "name", "") or "").strip()
+        filename = Path(original_name).name if original_name else Path(saved_name).name
+
+        img = models.Image.objects.create(url=relative_url, filename=filename)
         return Response(ImageSerializer(img, context={"request": request}).data, status=201)
 
 
@@ -1240,7 +1332,8 @@ def change_password(request):
     # Verify current password
     if not verify_password(current_password, request.user.password_hash):
         return Response(
-            {"detail": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST
+            {"detail": "Current password is incorrect"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     if len(new_password) < 8:
@@ -1722,7 +1815,8 @@ def password_reset_confirm(request):
         )
         if not prt:
             return Response(
-                {"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Invalid or expired token"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         user = prt.user
@@ -1804,7 +1898,8 @@ def email_verification_confirm(request):
         )
         if not evt:
             return Response(
-                {"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Invalid or expired token"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         user = evt.user

@@ -14,12 +14,12 @@ class IsAdminSite(AdminSite):
         user = getattr(request, "user", None)
         if not user:
             return False
-        if getattr(user, "is_admin", False):
+        if getattr(user, "role", None) == "admin":
             return True
         return bool(getattr(user, "is_active", True) and (user.is_staff or user.is_superuser))
 
 
-admin_site = IsAdminSite(name="is_admin_site")
+admin_site = IsAdminSite(name="role_admin_site")
 
 
 @admin.register(models.Product, site=admin_site)
@@ -37,7 +37,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.User, site=admin_site)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("id", "username", "email", "is_admin", "created_at")
+    list_display = ("id", "username", "email", "role", "created_at")
     search_fields = ("username", "email")
 
 
