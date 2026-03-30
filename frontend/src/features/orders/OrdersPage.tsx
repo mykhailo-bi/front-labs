@@ -37,6 +37,8 @@ function parseErrorMessage(error: unknown): string {
     return 'Unexpected error'
 }
 
+const PAGE_SIZE = 10
+
 export function OrdersPage() {
     const [orders, setOrders] = useState<PaginatedResponse<Order> | null>(null)
     const [page, setPage] = useState(1)
@@ -48,7 +50,7 @@ export function OrdersPage() {
         setIsLoading(true)
         setError(null)
         try {
-            const nextOrders = await fetchOrders(page)
+            const nextOrders = await fetchOrders(page, PAGE_SIZE)
             setOrders(nextOrders)
         } catch (err) {
             setError(parseErrorMessage(err))
@@ -74,6 +76,18 @@ export function OrdersPage() {
         }
     }
 
+    const totalPages = orders ? Math.max(1, Math.ceil(orders.count / PAGE_SIZE)) : 1
+    const isServerPaginated =
+        Boolean(orders?.next || orders?.previous) ||
+        (orders ? orders.results.length < orders.count : false)
+    const visibleOrders = orders
+        ? isServerPaginated
+            ? orders.results
+            : orders.results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+        : []
+    const hasPreviousPage = isServerPaginated ? Boolean(orders?.previous) : page > 1
+    const hasNextPage = isServerPaginated ? Boolean(orders?.next) : page < totalPages
+
     return (
         <Card>
             <CardHeader>
@@ -94,7 +108,7 @@ export function OrdersPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {(orders?.results ?? []).map((order) => {
+                        {visibleOrders.map((order) => {
                             const key = `order:${order.id}`
                             const canShip = ['placed', 'paid'].includes(order.status)
                             const canDeliver = order.status === 'shipped'
@@ -159,9 +173,11 @@ export function OrdersPage() {
                 </Table>
                 <Pager
                     page={page}
-                    hasPrevious={Boolean(orders?.previous)}
-                    hasNext={Boolean(orders?.next)}
-                    onPageChange={setPage}
+                    totalPages={totalPages}
+                    hasPrevious={hasPreviousPage}
+                    hasNext={hasNextPage}
+                    disabled={isLoading}
+                    onPageChange={(nextPage) => setPage(Math.max(1, Math.min(nextPage, totalPages)))}
                 />
                 {isLoading ? <p className='text-sm text-muted-foreground'>Loading orders...</p> : null}
             </CardContent>

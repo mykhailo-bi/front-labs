@@ -42,6 +42,8 @@ function parseErrorMessage(error: unknown): string {
     return 'Unexpected error'
 }
 
+const PAGE_SIZE = 10
+
 export function ProductsPage() {
     const [products, setProducts] = useState<PaginatedResponse<Product> | null>(null)
     const [page, setPage] = useState(1)
@@ -60,7 +62,7 @@ export function ProductsPage() {
         setIsLoading(true)
         setError(null)
         try {
-            const nextProducts = await fetchProducts(page)
+            const nextProducts = await fetchProducts(page, PAGE_SIZE)
             setProducts(nextProducts)
         } catch (err) {
             setError(parseErrorMessage(err))
@@ -113,6 +115,18 @@ export function ProductsPage() {
             setIsPublished(true)
         })
     }
+
+    const totalPages = products ? Math.max(1, Math.ceil(products.count / PAGE_SIZE)) : 1
+    const isServerPaginated =
+        Boolean(products?.next || products?.previous) ||
+        (products ? products.results.length < products.count : false)
+    const visibleProducts = products
+        ? isServerPaginated
+            ? products.results
+            : products.results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+        : []
+    const hasPreviousPage = isServerPaginated ? Boolean(products?.previous) : page > 1
+    const hasNextPage = isServerPaginated ? Boolean(products?.next) : page < totalPages
 
     return (
         <section className='space-y-4'>
@@ -199,7 +213,7 @@ export function ProductsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {(products?.results ?? []).map((product) => {
+                            {visibleProducts.map((product) => {
                                 const key = `product:${product.id}`
                                 const isBusy = actionKey === key
 
@@ -254,9 +268,11 @@ export function ProductsPage() {
                     </Table>
                     <Pager
                         page={page}
-                        hasPrevious={Boolean(products?.previous)}
-                        hasNext={Boolean(products?.next)}
-                        onPageChange={setPage}
+                        totalPages={totalPages}
+                        hasPrevious={hasPreviousPage}
+                        hasNext={hasNextPage}
+                        disabled={isLoading}
+                        onPageChange={(nextPage) => setPage(Math.max(1, Math.min(nextPage, totalPages)))}
                     />
                     {isLoading ? <p className='text-sm text-muted-foreground'>Loading products...</p> : null}
                 </CardContent>

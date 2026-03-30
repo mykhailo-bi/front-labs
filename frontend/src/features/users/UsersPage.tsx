@@ -29,6 +29,8 @@ function parseErrorMessage(error: unknown): string {
     return 'Unexpected error'
 }
 
+const PAGE_SIZE = 10
+
 export function UsersPage() {
     const [users, setUsers] = useState<PaginatedResponse<User> | null>(null)
     const [page, setPage] = useState(1)
@@ -40,7 +42,7 @@ export function UsersPage() {
         setIsLoading(true)
         setError(null)
         try {
-            const nextUsers = await fetchUsers(page)
+            const nextUsers = await fetchUsers(page, PAGE_SIZE)
             setUsers(nextUsers)
         } catch (err) {
             setError(parseErrorMessage(err))
@@ -66,6 +68,18 @@ export function UsersPage() {
         }
     }
 
+    const totalPages = users ? Math.max(1, Math.ceil(users.count / PAGE_SIZE)) : 1
+    const isServerPaginated =
+        Boolean(users?.next || users?.previous) ||
+        (users ? users.results.length < users.count : false)
+    const visibleUsers = users
+        ? isServerPaginated
+            ? users.results
+            : users.results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+        : []
+    const hasPreviousPage = isServerPaginated ? Boolean(users?.previous) : page > 1
+    const hasNextPage = isServerPaginated ? Boolean(users?.next) : page < totalPages
+
     return (
         <Card>
             <CardHeader>
@@ -86,7 +100,7 @@ export function UsersPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {(users?.results ?? []).map((user) => {
+                        {visibleUsers.map((user) => {
                             const key = `user:${user.id}`
                             const nextStatus = user.status === 'active' ? 'suspended' : 'active'
                             const nextRole = user.role === 'admin' ? 'customer' : 'admin'
@@ -138,9 +152,11 @@ export function UsersPage() {
                 </Table>
                 <Pager
                     page={page}
-                    hasPrevious={Boolean(users?.previous)}
-                    hasNext={Boolean(users?.next)}
-                    onPageChange={setPage}
+                    totalPages={totalPages}
+                    hasPrevious={hasPreviousPage}
+                    hasNext={hasNextPage}
+                    disabled={isLoading}
+                    onPageChange={(nextPage) => setPage(Math.max(1, Math.min(nextPage, totalPages)))}
                 />
                 {isLoading ? <p className='text-sm text-muted-foreground'>Loading users...</p> : null}
             </CardContent>
