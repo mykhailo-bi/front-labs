@@ -57,9 +57,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "db_table": "user_invite",
-                "indexes": [
-                    models.Index(fields=["expires_at"], name="user_invite_exp_idx")
-                ],
+                "indexes": [models.Index(fields=["expires_at"], name="user_invite_exp_idx")],
             },
         ),
     ]

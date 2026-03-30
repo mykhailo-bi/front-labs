@@ -26,13 +26,9 @@ class DbConstraintTests:
                 models.Order.objects.create(user=self.user, idempotency_key="idem-1")
 
     def test_payment_attempt_idempotency_key_unique_per_order_when_not_null(self):
-        order = models.Order.objects.create(
-            user=self.user, idempotency_key="order-idem-1"
-        )
+        order = models.Order.objects.create(user=self.user, idempotency_key="order-idem-1")
         models.PaymentAttempt.objects.create(order=order, idempotency_key="pay-idem-1")
 
         with pytest.raises(IntegrityError):
             with transaction.atomic():
-                models.PaymentAttempt.objects.create(
-                    order=order, idempotency_key="pay-idem-1"
-                )
+                models.PaymentAttempt.objects.create(order=order, idempotency_key="pay-idem-1")

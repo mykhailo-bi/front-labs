@@ -93,13 +93,7 @@ class OpenApiAndAdminTests:
         )
 
         obj = type("Obj", (), {"user_id": 1})()
-        req_owner = type(
-            "R", (), {"user": type("U", (), {"id": 1, "is_admin": False})()}
-        )()
-        req_other = type(
-            "R", (), {"user": type("U", (), {"id": 2, "is_admin": False})()}
-        )()
+        req_owner = type("R", (), {"user": type("U", (), {"id": 1, "is_admin": False})()})()
+        req_other = type("R", (), {"user": type("U", (), {"id": 2, "is_admin": False})()})()
         assert api_module.IsOwnerOrAdmin().has_object_permission(req_owner, None, obj)
-        assert not api_module.IsOwnerOrAdmin().has_object_permission(
-            req_other, None, obj
-        )
+        assert not api_module.IsOwnerOrAdmin().has_object_permission(req_other, None, obj)

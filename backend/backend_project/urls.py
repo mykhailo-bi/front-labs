@@ -30,8 +30,7 @@ def _docs_enabled() -> bool:
     from django.conf import settings
 
     return getattr(settings, "DEBUG", False) or (
-        str(getattr(settings, "SPECTACULAR_ENABLE_DOCS", "")).lower()
-        in {"1", "true", "yes", "on"}
+        str(getattr(settings, "SPECTACULAR_ENABLE_DOCS", "")).lower() in {"1", "true", "yes", "on"}
     )
 
 

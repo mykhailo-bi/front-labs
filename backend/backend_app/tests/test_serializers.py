@@ -138,9 +138,7 @@ class SerializerValidationTests:
         )
         assert ser_email.is_valid(), ser_email.errors
 
-        ser_bad = LoginSerializer(
-            data={"username_or_email": "missing", "password": "secret1234"}
-        )
+        ser_bad = LoginSerializer(data={"username_or_email": "missing", "password": "secret1234"})
         assert not ser_bad.is_valid()
 
         ser_bad_pw = LoginSerializer(
@@ -208,9 +206,7 @@ class SerializerValidationTests:
             total=Decimal("10.00"),
             subtotal=Decimal("10.00"),
         )
-        models.OrderContent.objects.create(
-            order=paid_order, product=self.product, count=1
-        )
+        models.OrderContent.objects.create(order=paid_order, product=self.product, count=1)
 
         ser = ReviewSerializer(
             data={"product_id": self.product.id, "rating": 5, "text": "great"},
@@ -229,9 +225,7 @@ class SerializerValidationTests:
     def test_order_serializer_non_admin_cannot_set_user(self):
         from backend_app.serializers import OrderSerializer
 
-        ser = OrderSerializer(
-            data={"user_id": self.user2.id}, context=self._ctx(self.user)
-        )
+        ser = OrderSerializer(data={"user_id": self.user2.id}, context=self._ctx(self.user))
         assert not ser.is_valid()
         assert "user_id" in ser.errors
 

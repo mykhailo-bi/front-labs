@@ -33,9 +33,7 @@ class SimpleJWTAuthenticationTests:
 
         assert self.auth.get_raw_token(header) == "token"
 
-        request_bytes = type(
-            "R", (), {"META": {"HTTP_AUTHORIZATION": b"Bearer token"}}
-        )()
+        request_bytes = type("R", (), {"META": {"HTTP_AUTHORIZATION": b"Bearer token"}})()
         header_bytes = self.auth.get_header(request_bytes)
         assert header_bytes == b"Bearer token"
 
@@ -86,9 +84,7 @@ class SimpleJWTAuthenticationTests:
             with pytest.raises(drf_exc.AuthenticationFailed):
                 self.auth.get_user(token)
 
-        with mock.patch(
-            "backend_app.auth.AccessToken.get", side_effect=[self.user.id, None]
-        ):
+        with mock.patch("backend_app.auth.AccessToken.get", side_effect=[self.user.id, None]):
             with pytest.raises(drf_exc.AuthenticationFailed):
                 self.auth.get_user(token)
 

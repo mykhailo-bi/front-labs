@@ -16,9 +16,7 @@ class IsAdminSite(AdminSite):
             return False
         if getattr(user, "is_admin", False):
             return True
-        return bool(
-            getattr(user, "is_active", True) and (user.is_staff or user.is_superuser)
-        )
+        return bool(getattr(user, "is_active", True) and (user.is_staff or user.is_superuser))
 
 
 admin_site = IsAdminSite(name="is_admin_site")

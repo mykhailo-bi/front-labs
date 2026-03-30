@@ -214,15 +214,11 @@ WSGI_APPLICATION = "backend_project.wsgi.application"
 # Treat empty string as unset.
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY") or SECRET_KEY
 JWT_ACCESS_TTL_SECONDS = int(os.getenv("JWT_ACCESS_TTL_SECONDS", "900"))  # 15 minutes
-JWT_REFRESH_TTL_SECONDS = int(
-    os.getenv("JWT_REFRESH_TTL_SECONDS", "1209600")
-)  # 14 days
+JWT_REFRESH_TTL_SECONDS = int(os.getenv("JWT_REFRESH_TTL_SECONDS", "1209600"))  # 14 days
 
 
 # Order reservation TTL (how long stock stays reserved after checkout before release job cancels it).
-ORDER_RESERVATION_TTL_SECONDS = int(
-    os.getenv("ORDER_RESERVATION_TTL_SECONDS", str(30 * 60))
-)
+ORDER_RESERVATION_TTL_SECONDS = int(os.getenv("ORDER_RESERVATION_TTL_SECONDS", str(30 * 60)))
 
 # Totals calculation (placeholders for now; server-derived)
 ORDER_CURRENCY = os.getenv("ORDER_CURRENCY", "USD")
@@ -309,9 +305,7 @@ def _path_from_env(name: str, default: Path) -> Path:
 MEDIA_ROOT = _path_from_env("MEDIA_ROOT", BASE_DIR / "media")
 
 # Upload limits
-IMAGE_UPLOAD_MAX_BYTES = int(
-    os.getenv("IMAGE_UPLOAD_MAX_BYTES", str(5 * 1024 * 1024))
-)  # 5 MiB
+IMAGE_UPLOAD_MAX_BYTES = int(os.getenv("IMAGE_UPLOAD_MAX_BYTES", str(5 * 1024 * 1024)))  # 5 MiB
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

@@ -118,9 +118,7 @@ class AuthFlowTests:
             is_admin=False,
         )
         access = issue_token_pair(user=self.user).access
-        with mock.patch(
-            "backend_app.api.MeSerializer.save", side_effect=IntegrityError
-        ):
+        with mock.patch("backend_app.api.MeSerializer.save", side_effect=IntegrityError):
             res = self.client.patch(
                 "/api/v1/me/",
                 {"email": other.email},

@@ -83,9 +83,7 @@ class UserSerializer(serializers.ModelSerializer):
         def _conflict(field: str, value, message: str):
             if value is None:
                 return
-            qs = models.User.objects.filter(**{field: value}).exclude(
-                pk=self.instance.pk
-            )
+            qs = models.User.objects.filter(**{field: value}).exclude(pk=self.instance.pk)
             if qs.exists():
                 raise serializers.ValidationError({field: message})
 
@@ -183,9 +181,7 @@ class TokenRefreshSerializer(serializers.Serializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    image_ids = serializers.PrimaryKeyRelatedField(
-        source="images", many=True, read_only=True
-    )
+    image_ids = serializers.PrimaryKeyRelatedField(source="images", many=True, read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
         source="category",
         queryset=models.Category.objects.all(),
@@ -238,12 +234,8 @@ class OrderItemSerializer(serializers.Serializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    user_id = serializers.PrimaryKeyRelatedField(
-        source="user", queryset=models.User.objects.all()
-    )
-    product_ids = serializers.PrimaryKeyRelatedField(
-        source="products", many=True, read_only=True
-    )
+    user_id = serializers.PrimaryKeyRelatedField(source="user", queryset=models.User.objects.all())
+    product_ids = serializers.PrimaryKeyRelatedField(source="products", many=True, read_only=True)
     items = serializers.SerializerMethodField()
     shipping_address = serializers.SerializerMethodField()
 
@@ -317,9 +309,7 @@ class OrderSerializer(serializers.ModelSerializer):
             for row in qs
         ]
 
-    @extend_schema_field(
-        serializers.DictField(child=serializers.CharField(), allow_null=True)
-    )
+    @extend_schema_field(serializers.DictField(child=serializers.CharField(), allow_null=True))
     def get_shipping_address(self, obj: models.Order):
         if not obj.shipping_full_name:
             return None
@@ -343,9 +333,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         # Non-admins cannot create/update orders for other users.
         if "user" in attrs and attrs["user"] != request.user:
-            raise serializers.ValidationError(
-                {"user_id": "Cannot set user_id for this order."}
-            )
+            raise serializers.ValidationError({"user_id": "Cannot set user_id for this order."})
         return attrs
 
 
@@ -354,9 +342,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     product_id = serializers.PrimaryKeyRelatedField(
         source="product", queryset=models.Product.objects.all()
     )
-    image_ids = serializers.PrimaryKeyRelatedField(
-        source="images", many=True, read_only=True
-    )
+    image_ids = serializers.PrimaryKeyRelatedField(source="images", many=True, read_only=True)
 
     class Meta:
         model = models.Review
@@ -390,9 +376,7 @@ class ReviewSerializer(serializers.ModelSerializer):
                 product=product,
             ).exists()
             if not eligible:
-                raise serializers.ValidationError(
-                    {"product_id": "Review requires a paid order."}
-                )
+                raise serializers.ValidationError({"product_id": "Review requires a paid order."})
 
         return attrs
 
@@ -483,9 +467,7 @@ class WishlistItemSerializer(serializers.ModelSerializer):
             and product
             and models.WishlistItem.objects.filter(user=user, product=product).exists()
         ):
-            raise serializers.ValidationError(
-                {"product_id": "Product is already in wishlist."}
-            )
+            raise serializers.ValidationError({"product_id": "Product is already in wishlist."})
         return attrs
 
     def create(self, validated_data):
@@ -503,9 +485,7 @@ class WishlistItemSerializer(serializers.ModelSerializer):
             and product
             and models.WishlistItem.objects.filter(user=user, product=product).exists()
         ):
-            raise serializers.ValidationError(
-                {"product_id": "Product is already in wishlist."}
-            )
+            raise serializers.ValidationError({"product_id": "Product is already in wishlist."})
         try:
             return super().create(validated_data)
         except IntegrityError as exc:
@@ -543,9 +523,7 @@ class SavedItemSerializer(serializers.ModelSerializer):
             and product
             and models.SavedItem.objects.filter(user=user, product=product).exists()
         ):
-            raise serializers.ValidationError(
-                {"product_id": "Product is already saved."}
-            )
+            raise serializers.ValidationError({"product_id": "Product is already saved."})
         return attrs
 
     def create(self, validated_data):
@@ -561,15 +539,11 @@ class SavedItemSerializer(serializers.ModelSerializer):
             and product
             and models.SavedItem.objects.filter(user=user, product=product).exists()
         ):
-            raise serializers.ValidationError(
-                {"product_id": "Product is already saved."}
-            )
+            raise serializers.ValidationError({"product_id": "Product is already saved."})
         try:
             return super().create(validated_data)
         except IntegrityError as exc:
-            raise serializers.ValidationError(
-                {"product_id": "Product is already saved."}
-            ) from exc
+            raise serializers.ValidationError({"product_id": "Product is already saved."}) from exc
 
 
 class ImageSerializer(serializers.ModelSerializer):
@@ -609,13 +583,9 @@ class CartItemSerializer(serializers.ModelSerializer):
             return attrs
 
         if getattr(product, "status", "active") != "active":
-            raise serializers.ValidationError(
-                {"product_id": "Product is not available."}
-            )
+            raise serializers.ValidationError({"product_id": "Product is not available."})
 
-        available = int(getattr(product, "stock_qty", 0)) - int(
-            getattr(product, "reserved_qty", 0)
-        )
+        available = int(getattr(product, "stock_qty", 0)) - int(getattr(product, "reserved_qty", 0))
         if int(count) > available:
             raise serializers.ValidationError({"count": "Insufficient stock."})
 
@@ -638,9 +608,7 @@ class CartItemSerializer(serializers.ModelSerializer):
                     defaults={"count": count},
                 )
             except IntegrityError:
-                obj = models.Cart.objects.select_for_update().get(
-                    user=user, product=product
-                )
+                obj = models.Cart.objects.select_for_update().get(user=user, product=product)
                 created = False
 
             if not created:
@@ -785,39 +753,21 @@ class ReadyzNotReadyResponseSerializer(serializers.Serializer):
 
 
 class CheckoutRequestSerializer(serializers.Serializer):
-    shipping_full_name = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
-    shipping_phone = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
+    shipping_full_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     shipping_address_line1 = serializers.CharField(
         required=False, allow_blank=True, allow_null=True
     )
     shipping_address_line2 = serializers.CharField(
         required=False, allow_blank=True, allow_null=True
     )
-    shipping_city = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
-    shipping_state = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
-    shipping_postal_code = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
-    shipping_country = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
-    delivery_method = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
-    payment_method = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
-    contact_phone = serializers.CharField(
-        required=False, allow_blank=True, allow_null=True
-    )
+    shipping_city = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_state = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_postal_code = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    shipping_country = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    delivery_method = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    payment_method = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    contact_phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class LogoutSerializer(serializers.Serializer):

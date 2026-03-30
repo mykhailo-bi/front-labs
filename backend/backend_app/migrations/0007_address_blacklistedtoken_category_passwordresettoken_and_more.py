@@ -227,16 +227,12 @@ class Migration(migrations.Migration):
             model_name="user",
             name="tokens_invalidated_at",
             field=models.DateTimeField(
-                default=datetime.datetime(
-                    1970, 1, 1, 0, 0, tzinfo=datetime.timezone.utc
-                )
+                default=datetime.datetime(1970, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)
             ),
         ),
         migrations.AddIndex(
             model_name="product",
-            index=models.Index(
-                fields=["is_published"], name="product_is_published_idx"
-            ),
+            index=models.Index(fields=["is_published"], name="product_is_published_idx"),
         ),
         migrations.AddField(
             model_name="wishlistitem",

@@ -28,9 +28,7 @@ class CsvImportLimitTests:
     @override_settings(CSV_IMPORT_MAX_BYTES=10)
     def test_user_import_rejects_large_file(self):
         content = "email\n" + ("a" * 20)
-        upload = SimpleUploadedFile(
-            "users.csv", content.encode("utf-8"), content_type="text/csv"
-        )
+        upload = SimpleUploadedFile("users.csv", content.encode("utf-8"), content_type="text/csv")
         res = self.client.post(
             "/api/v1/users/import/",
             {"file": upload},
@@ -56,17 +54,13 @@ class CsvImportLimitTests:
         assert "detail" in res.data
 
     def test_user_import_missing_file(self):
-        res = self.client.post(
-            "/api/v1/users/import/", {}, format="multipart", **self._auth()
-        )
+        res = self.client.post("/api/v1/users/import/", {}, format="multipart", **self._auth())
         assert res.status_code == 400
         assert "file" in res.data
 
     def test_user_import_success_with_defaults_and_integrity_errors(self):
         content = "email,username,password,is_admin,is_email_verified\nuser1@example.com,u1,,1,0\nuser1@example.com,u1,,0,0\n"
-        upload = SimpleUploadedFile(
-            "users.csv", content.encode("utf-8"), content_type="text/csv"
-        )
+        upload = SimpleUploadedFile("users.csv", content.encode("utf-8"), content_type="text/csv")
         res = self.client.post(
             "/api/v1/users/import/",
             {"file": upload},
@@ -79,14 +73,14 @@ class CsvImportLimitTests:
         assert res.data["updated"] == 1
 
     def test_product_import_missing_file(self):
-        res = self.client.post(
-            "/api/v1/products/import/", {}, format="multipart", **self._auth()
-        )
+        res = self.client.post("/api/v1/products/import/", {}, format="multipart", **self._auth())
         assert res.status_code == 400
         assert "file" in res.data
 
     def test_product_import_success_creates_and_updates(self):
-        content = "sku,name,price,stock_qty,is_published\nSKU1,Prod1,10.00,5,1\nSKU1,Prod1b,11.00,6,1\n"
+        content = (
+            "sku,name,price,stock_qty,is_published\nSKU1,Prod1,10.00,5,1\nSKU1,Prod1b,11.00,6,1\n"
+        )
         upload = SimpleUploadedFile(
             "products.csv", content.encode("utf-8"), content_type="text/csv"
         )

@@ -108,9 +108,7 @@ class Order(models.Model):
                 name="uniq_order_user_idempotency_key_not_null",
             ),
         ]
-        indexes = [
-            models.Index(fields=["user", "created_at"], name="order_user_created_idx")
-        ]
+        indexes = [models.Index(fields=["user", "created_at"], name="order_user_created_idx")]
 
 
 class OrderContent(models.Model):
@@ -160,9 +158,7 @@ class Product(models.Model):
         db_table = "product"
         constraints = [
             CheckConstraint(check=Q(stock_qty__gte=0), name="product_stock_qty_gte_0"),
-            CheckConstraint(
-                check=Q(reserved_qty__gte=0), name="product_reserved_qty_gte_0"
-            ),
+            CheckConstraint(check=Q(reserved_qty__gte=0), name="product_reserved_qty_gte_0"),
             CheckConstraint(
                 check=Q(reserved_qty__lte=models.F("stock_qty")),
                 name="product_reserved_le_stock",
@@ -200,9 +196,7 @@ class Review(models.Model):
         db_table = "review"
         unique_together = (("user", "product"),)
         constraints = [
-            CheckConstraint(
-                check=Q(rating__gte=1) & Q(rating__lte=5), name="review_rating_1_5"
-            ),
+            CheckConstraint(check=Q(rating__gte=1) & Q(rating__lte=5), name="review_rating_1_5"),
         ]
 
     def clean(self):
@@ -375,9 +369,7 @@ class OrderEvent(models.Model):
     class Meta:
         db_table = "order_event"
         indexes = [
-            models.Index(
-                fields=["order", "created_at"], name="order_event_order_created_idx"
-            )
+            models.Index(fields=["order", "created_at"], name="order_event_order_created_idx")
         ]
 
 
@@ -390,9 +382,7 @@ class BlacklistedToken(models.Model):
 
     class Meta:
         db_table = "blacklisted_token"
-        indexes = [
-            models.Index(fields=["expires_at"], name="blacklisted_token_exp_idx")
-        ]
+        indexes = [models.Index(fields=["expires_at"], name="blacklisted_token_exp_idx")]
 
 
 class PasswordResetToken(models.Model):
@@ -416,9 +406,7 @@ class EmailVerificationToken(models.Model):
 
     class Meta:
         db_table = "email_verification_token"
-        indexes = [
-            models.Index(fields=["expires_at"], name="email_verification_exp_idx")
-        ]
+        indexes = [models.Index(fields=["expires_at"], name="email_verification_exp_idx")]
 
 
 class UserInvite(models.Model):

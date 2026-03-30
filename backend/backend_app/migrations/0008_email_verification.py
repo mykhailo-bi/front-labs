@@ -50,11 +50,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "db_table": "email_verification_token",
-                "indexes": [
-                    models.Index(
-                        fields=["expires_at"], name="email_verification_exp_idx"
-                    )
-                ],
+                "indexes": [models.Index(fields=["expires_at"], name="email_verification_exp_idx")],
             },
         ),
     ]

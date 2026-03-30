@@ -40,9 +40,7 @@ class LoggingAndMiddlewareUnitTests:
             return HttpResponse("ok")
 
         mw = middleware_module.RequestIdMiddleware(get_response)
-        request = SimpleNamespace(
-            META={middleware_module.RequestIdMiddleware.header_name: rid}
-        )
+        request = SimpleNamespace(META={middleware_module.RequestIdMiddleware.header_name: rid})
         response = mw(request)
         assert request.request_id == rid
         assert response[middleware_module.RequestIdMiddleware.response_header] == rid
@@ -64,9 +62,7 @@ class LoggingAndMiddlewareUnitTests:
 
         # Invalid header (fails regex)
         bad = "!bad"
-        request_bad = SimpleNamespace(
-            META={middleware_module.RequestIdMiddleware.header_name: bad}
-        )
+        request_bad = SimpleNamespace(META={middleware_module.RequestIdMiddleware.header_name: bad})
         response_bad = mw(request_bad)
         assert request_bad.request_id != bad
         assert uuid.UUID(request_bad.request_id)
@@ -83,9 +79,7 @@ class LoggingAndMiddlewareUnitTests:
             return DummyResponse()
 
         mw = middleware_module.RequestIdMiddleware(get_response)
-        request = SimpleNamespace(
-            META={middleware_module.RequestIdMiddleware.header_name: 123}
-        )
+        request = SimpleNamespace(META={middleware_module.RequestIdMiddleware.header_name: 123})
         response = mw(request)
         assert uuid.UUID(request.request_id)
         assert response is not None

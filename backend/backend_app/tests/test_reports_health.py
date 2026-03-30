@@ -123,9 +123,7 @@ class ReportsAndHealthTests:
 
         with (
             mock.patch("backend_app.health.MigrationExecutor", DummyExecutor),
-            mock.patch(
-                "backend_app.health.connection.cursor", return_value=DummyCursor()
-            ),
+            mock.patch("backend_app.health.connection.cursor", return_value=DummyCursor()),
         ):
             response = health_module.readyz(request)
             assert response.status_code == 200
@@ -143,9 +141,7 @@ class ReportsAndHealthTests:
         health_module._READYZ_LAST_OK_AT = None
         with (
             mock.patch("backend_app.health.MigrationExecutor", DummyExecutorPending),
-            mock.patch(
-                "backend_app.health.connection.cursor", return_value=DummyCursor()
-            ),
+            mock.patch("backend_app.health.connection.cursor", return_value=DummyCursor()),
         ):
             response_pending = health_module.readyz(request)
             assert response_pending.status_code == 503

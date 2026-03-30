@@ -147,9 +147,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "products_in_cart",
-                    models.ManyToManyField(
-                        through="backend_app.Cart", to="backend_app.product"
-                    ),
+                    models.ManyToManyField(through="backend_app.Cart", to="backend_app.product"),
                 ),
             ],
             options={
@@ -191,9 +189,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="review",
             name="images",
-            field=models.ManyToManyField(
-                through="backend_app.ReviewImage", to="backend_app.image"
-            ),
+            field=models.ManyToManyField(through="backend_app.ReviewImage", to="backend_app.image"),
         ),
         migrations.AddField(
             model_name="review",

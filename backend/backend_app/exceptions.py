@@ -46,9 +46,7 @@ def drf_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
         payload["message"] = "Validation failed."
         payload["details"] = response.data
         response.status_code = status.HTTP_400_BAD_REQUEST
-    elif isinstance(
-        exc, (exceptions.NotAuthenticated, exceptions.AuthenticationFailed)
-    ):
+    elif isinstance(exc, (exceptions.NotAuthenticated, exceptions.AuthenticationFailed)):
         payload["code"] = "not_authenticated"
         payload["message"] = "Authentication required."
         payload["details"] = response.data

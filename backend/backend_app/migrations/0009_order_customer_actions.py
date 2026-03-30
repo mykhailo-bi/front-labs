@@ -54,9 +54,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 "db_table": "refund_request",
-                "indexes": [
-                    models.Index(fields=["order"], name="refund_request_order_idx")
-                ],
+                "indexes": [models.Index(fields=["order"], name="refund_request_order_idx")],
             },
         ),
         migrations.CreateModel(
