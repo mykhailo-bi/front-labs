@@ -22,6 +22,8 @@ import random
 from decimal import Decimal
 from typing import Iterable
 
+from django.utils import timezone
+
 
 def _django_setup() -> None:
     """Initialize Django so ORM can be used from a plain script."""
@@ -87,10 +89,18 @@ def main() -> None:
             # Delete in dependency order.
             models.ReviewImage.objects.filter(image__url__contains=f"/seed/{prefix}-").delete()
             models.ProductImage.objects.filter(image__url__contains=f"/seed/{prefix}-").delete()
+            models.OrderContent.objects.filter(
+                order__user__username__startswith=f"{prefix}_user_"
+            ).delete()
+            models.OrderEvent.objects.filter(
+                order__user__username__startswith=f"{prefix}_user_"
+            ).delete()
+            models.Order.objects.filter(user__username__startswith=f"{prefix}_user_").delete()
             models.Review.objects.filter(
                 product__name__startswith=f"{prefix}_product_",
             ).delete()
             models.Product.objects.filter(name__startswith=f"{prefix}_product_").delete()
+            models.Category.objects.filter(slug__startswith=f"{prefix}-category-").delete()
             models.User.objects.filter(username__startswith=f"{prefix}_user_").delete()
             models.User.objects.filter(username=admin_username).delete()
             # Images last (referenced by User.avatar; and by through tables already deleted).
@@ -136,17 +146,35 @@ def main() -> None:
                 )
             )
 
+        # Categories (fixed 4 categories)
+        categories: list[models.Category] = []
+        for i in range(4):
+            categories.append(
+                models.Category.objects.create(
+                    name=f"{prefix}_category_{i}",
+                    slug=f"{prefix}-category-{i}",
+                )
+            )
+
         # Products
         products: list[models.Product] = []
+        availabilities = ("in_stock", "preorder", "discontinued")
         for i in range(int(args.products)):
+            stock_qty = rng.randint(1, 50)
+            reserved_qty = rng.randint(0, stock_qty)
             products.append(
                 models.Product.objects.create(
+                    sku=f"{prefix}-sku-{args.seed}-{i:03d}",
                     name=f"{prefix}_product_{i}",
                     description=f"Seeded product #{i} ({prefix}).",
                     price=Decimal(str(rng.randint(5, 250))) + Decimal("0.99"),
                     status="active",
-                    stock_qty=rng.randint(0, 50),
-                    reserved_qty=0,
+                    stock_qty=stock_qty,
+                    reserved_qty=reserved_qty,
+                    category=rng.choice(categories),
+                    is_featured=(i % 3 == 0),
+                    is_published=True,
+                    availability=availabilities[i % len(availabilities)],
                 )
             )
 
@@ -188,10 +216,67 @@ def main() -> None:
 
         # Any remaining images stay unattached intentionally.
 
+        # Orders (1..3 per regular customer, excluding admins)
+        now = timezone.now()
+        created_orders = 0
+        for user in users:
+            order_count = rng.randint(1, 3)
+            for order_idx in range(order_count):
+                selected_products = rng.sample(products, k=min(len(products), rng.randint(1, 4)))
+                subtotal = Decimal("0.00")
+                order = models.Order.objects.create(
+                    user=user,
+                    status="placed",
+                    currency="USD",
+                    base_currency="USD",
+                    fx_rate=Decimal("1"),
+                    shipping_full_name=f"{user.firstname} {user.lastname}".strip(),
+                    shipping_phone=user.phone,
+                    shipping_address_line1=f"{100 + order_idx} Demo Street",
+                    shipping_address_line2="Apt 1",
+                    shipping_city="Demo City",
+                    shipping_state="Demo State",
+                    shipping_postal_code=f"10{rng.randint(100, 999)}",
+                    shipping_country="US",
+                    delivery_method="standard",
+                    payment_method="card",
+                    contact_phone=user.phone,
+                    idempotency_key=f"{prefix}-{user.username}-order-{order_idx}",
+                    placed_at=now,
+                )
+
+                for product in selected_products:
+                    count = rng.randint(1, 3)
+                    models.OrderContent.objects.create(
+                        order=order,
+                        product=product,
+                        count=count,
+                    )
+                    subtotal += product.price * count
+
+                shipping = Decimal("4.99")
+                tax = (subtotal * Decimal("0.08")).quantize(Decimal("0.01"))
+                discount = Decimal("0.00")
+                total = subtotal + shipping + tax - discount
+                order.subtotal = subtotal
+                order.shipping = shipping
+                order.tax = tax
+                order.discount = discount
+                order.total = total
+                order.save(update_fields=["subtotal", "shipping", "tax", "discount", "total"])
+
+                models.OrderEvent.objects.create(
+                    order=order,
+                    event_type="placed",
+                    note=f"Seeded order for {user.username}",
+                )
+                created_orders += 1
+
     print(
         "Seed complete. Created: "
-        f"admin=1, users={args.users}, products={args.products}, "
+        f"admin=1, users={args.users}, categories=4, products={args.products}, "
         f"reviews≈{args.products * min(args.users, args.reviews_per_product)}, "
+        f"orders={created_orders}, "
         f"images={args.images}. Prefix='{prefix}'."
     )
 
