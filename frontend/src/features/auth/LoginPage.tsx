@@ -60,6 +60,7 @@ export function LoginPage({ onLogin, isLoading, error }: LoginPageProps) {
                             <Field>
                                 <FieldLabel htmlFor='username_or_email'>Username or email</FieldLabel>
                                 <Input
+                                    tabIndex={1}
                                     id='username_or_email'
                                     autoComplete='username'
                                     placeholder='name@example.com'
@@ -76,6 +77,7 @@ export function LoginPage({ onLogin, isLoading, error }: LoginPageProps) {
                                     </Link>
                                 </div>
                                 <Input
+                                    tabIndex={2}
                                     id='password'
                                     type='password'
                                     autoComplete='current-password'
