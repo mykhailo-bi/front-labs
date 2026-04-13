@@ -23,7 +23,7 @@ export async function register(payload: {
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-    await request<void>('/auth/password-reset/request/', {
+    await request<void>('/auth/password-reset/', {
         method: 'POST',
         body: JSON.stringify({ email }),
     })

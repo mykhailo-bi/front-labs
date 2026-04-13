@@ -4,8 +4,13 @@ export type User = {
     email: string
     firstname: string | null
     lastname: string | null
+    description?: string | null
+    phone?: string | null
     role: string
     status: string
+    is_email_verified?: boolean
+    email_verified_at?: string | null
+    avatar_id?: number | null
 }
 
 export type Product = {
@@ -21,6 +26,9 @@ export type Product = {
     availability: string
     image_ids?: number[]
     category_id?: number | null
+    is_featured?: boolean
+    created_at?: string
+    updated_at?: string
 }
 
 export type ImageAsset = {
@@ -40,9 +48,45 @@ export type Order = {
     id: number
     user_id: number
     status: string
+    base_currency?: string
+    fx_rate?: string
+    subtotal?: string
+    shipping?: string
+    tax?: string
+    discount?: string
     total: string
     currency: string
+    items?: Array<{ product_id: number; count: number }>
+    shipping_address?: {
+        full_name: string
+        phone: string | null
+        line1: string
+        line2: string | null
+        city: string
+        state: string | null
+        postal_code: string
+        country: string
+    } | null
+    shipping_full_name?: string | null
+    shipping_phone?: string | null
+    shipping_address_line1?: string | null
+    shipping_address_line2?: string | null
+    shipping_city?: string | null
+    shipping_state?: string | null
+    shipping_postal_code?: string | null
+    shipping_country?: string | null
+    delivery_method?: string | null
+    payment_method?: string | null
+    contact_phone?: string | null
+    tracking_number?: string | null
+    tracking_url?: string | null
+    placed_at?: string | null
+    paid_at?: string | null
+    cancelled_at?: string | null
+    shipped_at?: string | null
+    delivered_at?: string | null
     created_at: string
+    updated_at?: string
 }
 
 export type OrderEvent = {
@@ -114,6 +158,16 @@ export type CartItem = {
     count: number
     created_at: string
     updated_at: string
+}
+
+export type CartSummary = {
+    currency: string
+    subtotal: string
+    shipping: string
+    tax: string
+    discount: string
+    total: string
+    items: CartItem[]
 }
 
 export type WishlistItem = {
