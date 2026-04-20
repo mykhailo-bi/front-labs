@@ -98,7 +98,7 @@ export function ProductCard({ product, href, rating, actions }: ProductCardProps
     }, [rating])
 
     const cardContent = (
-        <Card className='h-full overflow-hidden transition hover:border-primary/50 hover:shadow-sm'>
+        <Card className='h-full overflow-hidden transition hover:border-primary/50 hover:shadow-sm py-0 pb-4'>
             <div className='relative aspect-video w-full bg-muted/30'>
                 {imageUrl && !isBrokenImage ? (
                     <img
