@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ApiError, checkout, fetchCart, fetchCartSummary, fetchStoreProducts, removeCartItem, updateCartItem, type CartItem, type Product } from '@/lib/api'
+import { CartProductCard } from '@/components/common/CartProductCard'
 import { notify } from '@/lib/notify'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -76,12 +77,43 @@ export function CartPage() {
             cartItems.length > 0
     ), [checkoutForm, cartItems.length])
 
+    const fallbackProduct = (productId: number): Product => ({
+        id: productId,
+        sku: null,
+        name: `Product #${productId}`,
+        description: null,
+        price: '0.00',
+        status: 'unknown',
+        stock_qty: 0,
+        reserved_qty: 0,
+        is_published: false,
+        availability: 'unknown',
+        image_ids: [],
+    })
+
     const applyAction = async (key: string, callback: () => Promise<void>) => {
         setBusyKey(key)
         try {
             await callback()
             await refresh()
         } catch (err) {
+            notify.error(parseErrorMessage(err))
+        } finally {
+            setBusyKey(null)
+        }
+    }
+
+    const applyCountChange = async (itemId: number, nextCount: number, previousCount: number) => {
+        const key = `cart:update:${itemId}`
+        setBusyKey(key)
+        try {
+            await updateCartItem(itemId, { count: nextCount })
+            notify.success('Cart item updated')
+            await refresh()
+        } catch (err) {
+            setCartItems((prev) => prev.map((row) => (
+                row.id === itemId ? { ...row, count: previousCount } : row
+            )))
             notify.error(parseErrorMessage(err))
         } finally {
             setBusyKey(null)
@@ -97,46 +129,62 @@ export function CartPage() {
                 <CardContent className='space-y-3'>
                     {error ? <p className='text-sm text-destructive'>{error}</p> : null}
                     {cartItems.map((item) => {
-                        const product = productsById[item.product_id]
+                        const product = productsById[item.product_id] ?? fallbackProduct(item.product_id)
                         return (
-                            <div key={item.id} className='flex flex-wrap items-center gap-3 rounded-md border p-3'>
-                                <div className='min-w-40 flex-1'>
-                                    <p className='font-medium'>{product?.name ?? `Product #${item.product_id}`}</p>
-                                    <p className='text-sm text-muted-foreground'>${product?.price ?? '0.00'}</p>
-                                </div>
-                                <Input
-                                    type='number'
-                                    min={1}
-                                    className='w-24'
-                                    value={item.count}
-                                    onChange={(event) => {
-                                        const nextCount = Number(event.target.value)
-                                        setCartItems((prev) => prev.map((row) => (row.id === item.id ? { ...row, count: nextCount } : row)))
-                                    }}
-                                />
-                                <Button
-                                    size='sm'
-                                    variant='outline'
-                                    disabled={Boolean(busyKey)}
-                                    onClick={() => void applyAction(`cart:update:${item.id}`, async () => {
-                                        await updateCartItem(item.id, { count: item.count })
-                                        notify.success('Cart item updated')
-                                    })}
-                                >
-                                    Update
-                                </Button>
-                                <Button
-                                    size='sm'
-                                    variant='destructive'
-                                    disabled={Boolean(busyKey)}
-                                    onClick={() => void applyAction(`cart:remove:${item.id}`, async () => {
-                                        await removeCartItem(item.id)
-                                        notify.success('Item removed')
-                                    })}
-                                >
-                                    Remove
-                                </Button>
-                            </div>
+                            <CartProductCard
+                                key={item.id}
+                                product={product}
+                                count={item.count}
+                                decrementDisabled={Boolean(busyKey) || item.count <= 1}
+                                incrementDisabled={Boolean(busyKey)}
+                                onDecrement={() => {
+                                    const previousCount = item.count
+                                    const nextCount = Math.max(1, previousCount - 1)
+                                    if (nextCount === previousCount) {
+                                        return
+                                    }
+
+                                    setCartItems((prev) => prev.map((row) => (
+                                        row.id === item.id ? { ...row, count: Math.max(1, row.count - 1) } : row
+                                    )))
+                                    void applyCountChange(item.id, nextCount, previousCount)
+                                }}
+                                onIncrement={() => {
+                                    const previousCount = item.count
+                                    const nextCount = previousCount + 1
+
+                                    setCartItems((prev) => prev.map((row) => (
+                                        row.id === item.id ? { ...row, count: row.count + 1 } : row
+                                    )))
+                                    void applyCountChange(item.id, nextCount, previousCount)
+                                }}
+                                actions={(
+                                    <>
+                                        <Button
+                                            size='sm'
+                                            variant='outline'
+                                            disabled={Boolean(busyKey)}
+                                            onClick={() => void applyAction(`cart:update:${item.id}`, async () => {
+                                                await updateCartItem(item.id, { count: item.count })
+                                                notify.success('Cart item updated')
+                                            })}
+                                        >
+                                            Update
+                                        </Button>
+                                        <Button
+                                            size='sm'
+                                            variant='destructive'
+                                            disabled={Boolean(busyKey)}
+                                            onClick={() => void applyAction(`cart:remove:${item.id}`, async () => {
+                                                await removeCartItem(item.id)
+                                                notify.success('Item removed')
+                                            })}
+                                        >
+                                            Remove
+                                        </Button>
+                                    </>
+                                )}
+                            />
                         )
                     })}
                     {isLoading ? <p className='text-sm text-muted-foreground'>Loading cart...</p> : null}
