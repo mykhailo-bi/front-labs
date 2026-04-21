@@ -1,9 +1,10 @@
+import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Heart, LogOut, ShoppingBag, ShoppingCart, UserRound, WalletCards } from 'lucide-react'
 import { APP_PATHS } from '@/app/paths'
 import { ThemeModeToggle } from '@/components/theme/ThemeModeToggle'
 import { Button } from '@/components/ui/button'
-import type { User } from '@/lib/api'
+import { ApiError, fetchCartSummary, type User } from '@/lib/api'
 
 type StorefrontShellProps = {
     user: User
@@ -12,6 +13,43 @@ type StorefrontShellProps = {
 
 export function StorefrontShell({ user, onLogout }: StorefrontShellProps) {
     const location = useLocation()
+    const [cartUniqueItemsCount, setCartUniqueItemsCount] = useState(0)
+
+    useEffect(() => {
+        let isActive = true
+
+        const loadCartBadge = async () => {
+            try {
+                const summary = await fetchCartSummary()
+                if (!isActive) {
+                    return
+                }
+                setCartUniqueItemsCount(summary.items.length)
+            } catch (error) {
+                if (error instanceof ApiError && error.status === 401) {
+                    if (isActive) {
+                        setCartUniqueItemsCount(0)
+                    }
+                    return
+                }
+                if (isActive) {
+                    setCartUniqueItemsCount(0)
+                }
+            }
+        }
+
+        void loadCartBadge()
+
+        const handleCartUpdated = () => {
+            void loadCartBadge()
+        }
+        window.addEventListener('cart:updated', handleCartUpdated)
+
+        return () => {
+            isActive = false
+            window.removeEventListener('cart:updated', handleCartUpdated)
+        }
+    }, [location.pathname])
 
     const navItems = [
         { href: APP_PATHS.SHOP, title: 'Shop', icon: ShoppingBag },
@@ -37,6 +75,11 @@ export function StorefrontShell({ user, onLogout }: StorefrontShellProps) {
                                     <Link to={item.href}>
                                         <item.icon className='size-4' />
                                         {item.title}
+                                        {item.href === APP_PATHS.CART && cartUniqueItemsCount > 0 ? (
+                                            <span className='rounded-full bg-red-600 px-2 py-0.5 text-xs font-medium text-white'>
+                                                {cartUniqueItemsCount}
+                                            </span>
+                                        ) : null}
                                     </Link>
                                 </Button>
                             )

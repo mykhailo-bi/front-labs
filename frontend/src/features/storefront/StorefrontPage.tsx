@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { APP_PATHS } from '@/app/paths'
 import { ProductCard } from '@/components/common/ProductCard'
-import { ApiError, fetchProductReviews, fetchPublicCategories, fetchStoreProducts, type Category, type Product } from '@/lib/api'
+import { ApiError, addWishlistItem, fetchProductReviews, fetchPublicCategories, fetchStoreProducts, fetchWishlist, removeWishlistItem, type Category, type Product, type WishlistItem } from '@/lib/api'
 import { notify } from '@/lib/notify'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,24 +28,32 @@ export function StorefrontPage() {
     const [products, setProducts] = useState<Product[]>([])
     const [categories, setCategories] = useState<Category[]>([])
     const [ratingsByProductId, setRatingsByProductId] = useState<Record<number, RatingSummary>>({})
+    const [wishlistByProductId, setWishlistByProductId] = useState<Record<number, WishlistItem>>({})
     const [search, setSearch] = useState('')
     const [selectedCategory, setSelectedCategory] = useState('all')
     const [isLoading, setIsLoading] = useState(true)
+    const [busyKey, setBusyKey] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
 
     const refresh = useCallback(async () => {
         setIsLoading(true)
         setError(null)
         try {
-            const [productsRes, categoriesRes] = await Promise.all([
+            const [productsRes, categoriesRes, wishlistRes] = await Promise.all([
                 fetchStoreProducts(1, 24, {
                     category: selectedCategory === 'all' ? undefined : selectedCategory,
                     search: search.trim() || undefined,
                 }),
                 fetchPublicCategories(1, 100),
+                fetchWishlist(1, 500),
             ])
             setProducts(productsRes.results)
             setCategories(categoriesRes.results)
+            const map: Record<number, WishlistItem> = {}
+            wishlistRes.results.forEach((item) => {
+                map[item.product_id] = item
+            })
+            setWishlistByProductId(map)
         } catch (err) {
             const message = parseErrorMessage(err)
             setError(message)
@@ -105,6 +113,18 @@ export function StorefrontPage() {
         return categories.find((category) => category.slug === selectedCategory)?.name ?? 'Filtered'
     }, [categories, selectedCategory])
 
+    const applyAction = async (key: string, callback: () => Promise<void>) => {
+        setBusyKey(key)
+        try {
+            await callback()
+            await refresh()
+        } catch (err) {
+            notify.error(parseErrorMessage(err))
+        } finally {
+            setBusyKey(null)
+        }
+    }
+
     return (
         <section className='space-y-4'>
             <Card>
@@ -152,6 +172,18 @@ export function StorefrontPage() {
                         product={product}
                         href={APP_PATHS.productDetails(product.id)}
                         rating={ratingsByProductId[product.id]}
+                        isWishlisted={Boolean(wishlistByProductId[product.id])}
+                        wishlistDisabled={Boolean(busyKey)}
+                        onToggleWishlist={() => void applyAction(`wishlist:toggle:${product.id}`, async () => {
+                            const wishlistItem = wishlistByProductId[product.id]
+                            if (wishlistItem) {
+                                await removeWishlistItem(wishlistItem.id)
+                                notify.success('Removed from wishlist')
+                                return
+                            }
+                            await addWishlistItem(product.id)
+                            notify.success('Added to wishlist')
+                        })}
                     />
                 ))}
             </div>

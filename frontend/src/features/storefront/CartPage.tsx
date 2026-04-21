@@ -137,6 +137,11 @@ export function CartPage() {
                                 count={item.count}
                                 decrementDisabled={Boolean(busyKey) || item.count <= 1}
                                 incrementDisabled={Boolean(busyKey)}
+                                removeDisabled={Boolean(busyKey)}
+                                onRemove={() => void applyAction(`cart:remove:${item.id}`, async () => {
+                                    await removeCartItem(item.id)
+                                    notify.success('Item removed')
+                                })}
                                 onDecrement={() => {
                                     const previousCount = item.count
                                     const nextCount = Math.max(1, previousCount - 1)
@@ -158,32 +163,6 @@ export function CartPage() {
                                     )))
                                     void applyCountChange(item.id, nextCount, previousCount)
                                 }}
-                                actions={(
-                                    <>
-                                        <Button
-                                            size='sm'
-                                            variant='outline'
-                                            disabled={Boolean(busyKey)}
-                                            onClick={() => void applyAction(`cart:update:${item.id}`, async () => {
-                                                await updateCartItem(item.id, { count: item.count })
-                                                notify.success('Cart item updated')
-                                            })}
-                                        >
-                                            Update
-                                        </Button>
-                                        <Button
-                                            size='sm'
-                                            variant='destructive'
-                                            disabled={Boolean(busyKey)}
-                                            onClick={() => void applyAction(`cart:remove:${item.id}`, async () => {
-                                                await removeCartItem(item.id)
-                                                notify.success('Item removed')
-                                            })}
-                                        >
-                                            Remove
-                                        </Button>
-                                    </>
-                                )}
                             />
                         )
                     })}

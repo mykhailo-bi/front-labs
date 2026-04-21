@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Heart, ImageOff, PackagePlus, Star, WalletCards } from 'lucide-react'
+import { ArrowLeft, Heart, ImageOff, Minus, PackagePlus, Plus, Star, Trash2, WalletCards } from 'lucide-react'
 import { APP_PATHS } from '@/app/paths'
-import { ApiError, addSavedItem, addWishlistItem, createReview, fetchImage, fetchProductReviews, fetchSaved, fetchStoreProduct, fetchWishlist, removeSavedItem, removeWishlistItem, upsertCartItem, type Product, type Review, type SavedItem, type WishlistItem } from '@/lib/api'
+import { ApiError, addSavedItem, addWishlistItem, createReview, fetchCart, fetchImage, fetchProductReviews, fetchSaved, fetchStoreProduct, fetchWishlist, removeCartItem, removeSavedItem, removeWishlistItem, updateCartItem, upsertCartItem, type CartItem, type Product, type Review, type SavedItem, type WishlistItem } from '@/lib/api'
 import { notify } from '@/lib/notify'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -55,6 +55,7 @@ export function ProductDetailsPage() {
     const [nextReviewsPage, setNextReviewsPage] = useState<number | null>(null)
     const [wishlistItem, setWishlistItem] = useState<WishlistItem | null>(null)
     const [savedItem, setSavedItem] = useState<SavedItem | null>(null)
+    const [cartItem, setCartItem] = useState<CartItem | null>(null)
     const [rating, setRating] = useState('5')
     const [reviewText, setReviewText] = useState('')
     const [isLoading, setIsLoading] = useState(true)
@@ -90,14 +91,16 @@ export function ProductDetailsPage() {
         setIsLoading(true)
         setError(null)
         try {
-            const [productPayload, wishlistPayload, savedPayload] = await Promise.all([
+            const [productPayload, wishlistPayload, savedPayload, cartPayload] = await Promise.all([
                 fetchStoreProduct(productId),
                 fetchWishlist(1, 200),
                 fetchSaved(1, 200),
+                fetchCart(1, 200),
             ])
             setProduct(productPayload)
             setWishlistItem(wishlistPayload.results.find((item) => item.product_id === productId) ?? null)
             setSavedItem(savedPayload.results.find((item) => item.product_id === productId) ?? null)
+            setCartItem(cartPayload.results.find((item) => item.product_id === productId) ?? null)
             await loadReviews(1, false)
         } catch (err) {
             const message = parseErrorMessage(err)
@@ -253,7 +256,7 @@ export function ProductDetailsPage() {
                                     <div className='flex flex-wrap gap-2'>
                                         <Button
                                             size='sm'
-                                            variant='outline'
+                                            variant={wishlistItem ? 'default' : 'outline'}
                                             disabled={Boolean(busyKey)}
                                             onClick={() => void applyAction('wishlist', async () => {
                                                 if (wishlistItem) {
@@ -265,11 +268,11 @@ export function ProductDetailsPage() {
                                                 notify.success('Added to wishlist')
                                             })}
                                         >
-                                            <Heart className='size-4' /> {wishlistItem ? 'Wishlisted' : 'Wishlist'}
+                                            <Heart className={`size-4 ${wishlistItem ? 'fill-current' : ''}`} /> {wishlistItem ? 'Wishlisted' : 'Wishlist'}
                                         </Button>
                                         <Button
                                             size='sm'
-                                            variant='outline'
+                                            variant={savedItem ? 'default' : 'outline'}
                                             disabled={Boolean(busyKey)}
                                             onClick={() => void applyAction('saved', async () => {
                                                 if (savedItem) {
@@ -281,18 +284,60 @@ export function ProductDetailsPage() {
                                                 notify.success('Saved for later')
                                             })}
                                         >
-                                            <WalletCards className='size-4' /> {savedItem ? 'Saved' : 'Save'}
+                                            <WalletCards className={`size-4 ${savedItem ? 'fill-current' : ''}`} /> {savedItem ? 'Saved' : 'Save'}
                                         </Button>
                                         <Button
                                             size='sm'
                                             disabled={Boolean(busyKey)}
-                                            onClick={() => void applyAction('cart', async () => {
+                                            onClick={() => void applyAction('cart:add', async () => {
+                                                if (cartItem) {
+                                                    await removeCartItem(cartItem.id)
+                                                    notify.success('Removed from cart')
+                                                    return
+                                                }
                                                 await upsertCartItem({ product_id: product.id, count: 1 })
                                                 notify.success('Added to cart')
                                             })}
                                         >
-                                            <PackagePlus className='size-4' /> Add to cart
+                                            {cartItem ? (
+                                                <>
+                                                    <Trash2 className='size-4' /> Remove
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <PackagePlus className='size-4' /> Add to cart
+                                                </>
+                                            )}
                                         </Button>
+                                        {cartItem ? (
+                                            <div className='flex items-center gap-2 rounded-md border px-2 py-1'>
+                                                <Button
+                                                    size='icon'
+                                                    variant='ghost'
+                                                    className='size-7'
+                                                    disabled={Boolean(busyKey) || cartItem.count <= 1}
+                                                    onClick={() => void applyAction('cart:decrement', async () => {
+                                                        await updateCartItem(cartItem.id, { count: Math.max(1, cartItem.count - 1) })
+                                                        notify.success('Cart item updated')
+                                                    })}
+                                                >
+                                                    <Minus className='size-4' />
+                                                </Button>
+                                                <span className='min-w-5 text-center text-sm font-medium'>{cartItem.count}</span>
+                                                <Button
+                                                    size='icon'
+                                                    variant='ghost'
+                                                    className='size-7'
+                                                    disabled={Boolean(busyKey)}
+                                                    onClick={() => void applyAction('cart:increment', async () => {
+                                                        await updateCartItem(cartItem.id, { count: cartItem.count + 1 })
+                                                        notify.success('Cart item updated')
+                                                    })}
+                                                >
+                                                    <Plus className='size-4' />
+                                                </Button>
+                                            </div>
+                                        ) : null}
                                     </div>
                                 </div>
                             </div>

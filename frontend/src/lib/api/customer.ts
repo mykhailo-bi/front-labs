@@ -2,6 +2,12 @@ import { authRequest, paginated, request } from '@/lib/api/core'
 import type { PaginatedResponse } from '@/lib/api/core'
 import type { Address, CartItem, CartSummary, Category, Order, OrderEvent, Product, Review, SavedItem, User, WishlistItem } from '@/lib/api/types'
 
+function emitCartUpdated() {
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cart:updated'))
+    }
+}
+
 export async function fetchStoreProducts(
     page = 1,
     pageSize?: number,
@@ -69,21 +75,26 @@ export async function fetchCart(page = 1, pageSize?: number): Promise<PaginatedR
 }
 
 export async function upsertCartItem(payload: { product_id: number; count: number }): Promise<CartItem> {
-    return authRequest<CartItem>('/cart/items/', {
+    const item = await authRequest<CartItem>('/cart/items/', {
         method: 'POST',
         body: JSON.stringify(payload),
     })
+    emitCartUpdated()
+    return item
 }
 
 export async function updateCartItem(id: number, payload: { count: number }): Promise<CartItem> {
-    return authRequest<CartItem>(`/cart/items/${id}/`, {
+    const item = await authRequest<CartItem>(`/cart/items/${id}/`, {
         method: 'PATCH',
         body: JSON.stringify(payload),
     })
+    emitCartUpdated()
+    return item
 }
 
 export async function removeCartItem(id: number): Promise<void> {
     await authRequest<void>(`/cart/items/${id}/`, { method: 'DELETE' })
+    emitCartUpdated()
 }
 
 export async function fetchCartSummary(): Promise<CartSummary> {

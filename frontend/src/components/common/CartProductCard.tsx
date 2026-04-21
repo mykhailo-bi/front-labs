@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { ReactNode } from 'react'
-import { ImageOff, Minus, Plus } from 'lucide-react'
+import { ImageOff, Minus, Plus, Trash2 } from 'lucide-react'
 import { fetchImage, type Product } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,9 +9,10 @@ type CartProductCardProps = {
     count: number
     onDecrement?: () => void
     onIncrement?: () => void
+    onRemove?: () => void
     decrementDisabled?: boolean
     incrementDisabled?: boolean
-    actions?: ReactNode
+    removeDisabled?: boolean
 }
 
 const imageUrlCache = new Map<number, string | null>()
@@ -41,9 +41,10 @@ export function CartProductCard({
     count,
     onDecrement,
     onIncrement,
+    onRemove,
     decrementDisabled,
     incrementDisabled,
-    actions,
+    removeDisabled,
 }: CartProductCardProps) {
     const firstImageId = product.image_ids?.[0] ?? null
     const extraImages = Math.max((product.image_ids?.length ?? 0) - 1, 0)
@@ -124,6 +125,16 @@ export function CartProductCard({
                         <Button
                             type='button'
                             size='icon-sm'
+                            variant='destructive'
+                            disabled={removeDisabled}
+                            onClick={onRemove}
+                            aria-label={`Remove ${product.name} from cart`}
+                        >
+                            <Trash2 className='size-4' />
+                        </Button>
+                        <Button
+                            type='button'
+                            size='icon-sm'
                             variant='outline'
                             disabled={decrementDisabled}
                             onClick={onDecrement}
@@ -144,7 +155,6 @@ export function CartProductCard({
                         </Button>
                     </div>
                 </div>
-                {actions ? <div className='flex flex-wrap gap-2 pt-1'>{actions}</div> : null}
             </CardContent>
         </Card>
     )

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ImageOff, Star } from 'lucide-react'
+import { Heart, ImageOff, Star } from 'lucide-react'
 import { fetchImage, type Product } from '@/lib/api'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 type RatingSummary = {
@@ -15,6 +16,9 @@ type ProductCardProps = {
     href?: string
     rating?: RatingSummary
     actions?: ReactNode
+    isWishlisted?: boolean
+    wishlistDisabled?: boolean
+    onToggleWishlist?: () => void
 }
 
 const imageUrlCache = new Map<number, string | null>()
@@ -45,7 +49,15 @@ function renderStars(average: number) {
     })
 }
 
-export function ProductCard({ product, href, rating, actions }: ProductCardProps) {
+export function ProductCard({
+    product,
+    href,
+    rating,
+    actions,
+    isWishlisted,
+    wishlistDisabled,
+    onToggleWishlist,
+}: ProductCardProps) {
     const firstImageId = product.image_ids?.[0] ?? null
     const extraImages = Math.max((product.image_ids?.length ?? 0) - 1, 0)
     const [imageUrl, setImageUrl] = useState<string | null>(null)
@@ -133,7 +145,26 @@ export function ProductCard({ product, href, rating, actions }: ProductCardProps
                         <span>{ratingLabel}</span>
                     </div>
                 </div>
-                {actions ? <div className='flex flex-wrap gap-2 pt-1'>{actions}</div> : null}
+                {onToggleWishlist || actions ? (
+                    <div className='flex flex-wrap gap-2 pt-1'>
+                        {onToggleWishlist ? (
+                            <Button
+                                size='sm'
+                                variant={isWishlisted ? 'default' : 'outline'}
+                                disabled={wishlistDisabled}
+                                onClick={(event) => {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    onToggleWishlist()
+                                }}
+                            >
+                                <Heart className={`size-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                                {isWishlisted ? 'Wishlisted' : 'Wishlist'}
+                            </Button>
+                        ) : null}
+                        {actions}
+                    </div>
+                ) : null}
             </CardContent>
         </Card>
     )
