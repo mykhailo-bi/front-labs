@@ -133,6 +133,30 @@ The API will be available at:
 
 - `http://127.0.0.1:9000/`
 
+## Live AI chat via WebSocket
+
+Backend exposes WebSocket endpoint:
+
+- `ws://127.0.0.1:9000/ws/chat`
+
+Message contract:
+
+- Client -> server: `{"message":"Do you have discounts?"}`
+- Server -> client: `{"message":"...assistant reply..."}`
+
+Enable AI responses:
+
+1. Add key to backend `.env`:
+
+```env
+OPENAI_API_KEY=your_key_here
+OPENAI_CHAT_MODEL=gpt-4o-mini
+```
+
+2. Restart backend server.
+
+If `OPENAI_API_KEY` is missing, socket still works but returns a config hint instead of AI output.
+
 ## Authentication
 
 Reads are public.

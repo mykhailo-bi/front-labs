@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     # Required for serving drf-spectacular Swagger UI static assets in DEBUG.
     "django.contrib.staticfiles",
+    "channels",
     "rest_framework",
     "drf_spectacular",
     "backend_app.apps.BackendAppConfig",
@@ -208,6 +209,7 @@ LOGGING = {
 }
 
 WSGI_APPLICATION = "backend_project.wsgi.application"
+ASGI_APPLICATION = "backend_project.asgi.application"
 
 
 # JWT settings (kept for backward-compatible env var names)

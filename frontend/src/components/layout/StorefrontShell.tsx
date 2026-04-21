@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { Heart, LogOut, ShoppingBag, ShoppingCart, UserRound, WalletCards } from 'lucide-react'
 import { APP_PATHS } from '@/app/paths'
+import { AiAssistantChatModal } from '@/components/chat/AiAssistantChatModal'
 import { ThemeModeToggle } from '@/components/theme/ThemeModeToggle'
 import { Button } from '@/components/ui/button'
 import { ApiError, fetchCartSummary, type User } from '@/lib/api'
@@ -98,6 +99,7 @@ export function StorefrontShell({ user, onLogout }: StorefrontShellProps) {
             <main className='mx-auto w-full max-w-6xl px-4 py-5'>
                 <Outlet />
             </main>
+            <AiAssistantChatModal />
         </div>
     )
 }
