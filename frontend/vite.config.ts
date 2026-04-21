@@ -30,4 +30,19 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
+    test: {
+        environment: 'jsdom',
+        globals: false,
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'html'],
+            include: ['src/lib/api/core.ts', 'src/lib/utils.ts', 'src/lib/notify.ts'],
+            thresholds: {
+                lines: 70,
+                functions: 70,
+                branches: 70,
+                statements: 70,
+            },
+        },
+    },
 })
