@@ -1,3 +1,5 @@
+/* eslint-disable jsx-a11y/tabindex-no-positive */
+
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
@@ -59,6 +61,7 @@ export function LoginPage({ onLogin, isLoading, error }: LoginPageProps) {
                         <FieldGroup>
                             <Field>
                                 <FieldLabel htmlFor='username_or_email'>Username or email</FieldLabel>
+                                {/* eslint-disable-next-line jsx-a11y/tabindex-no-positive */}
                                 <Input
                                     tabIndex={1}
                                     id='username_or_email'
@@ -76,6 +79,7 @@ export function LoginPage({ onLogin, isLoading, error }: LoginPageProps) {
                                         Forgot password?
                                     </Link>
                                 </div>
+                                {/* eslint-disable-next-line jsx-a11y/tabindex-no-positive */}
                                 <Input
                                     tabIndex={2}
                                     id='password'

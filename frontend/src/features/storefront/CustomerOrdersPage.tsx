@@ -73,34 +73,35 @@ export function CustomerOrdersPage() {
             </CardHeader>
             <CardContent className='space-y-3'>
                 {error ? <p className='text-sm text-destructive'>{error}</p> : null}
-                {orders.map((order) => {
-                    return (
-                        <div key={order.id} className='rounded-md border p-3'>
-                            <div className='flex flex-wrap items-center justify-between gap-3'>
-                                <div>
-                                    <p className='font-medium'>Order #{order.id}</p>
-                                    <p className='text-sm text-muted-foreground'>
-                                        {order.currency} {order.total} - {new Date(order.created_at).toLocaleString()}
-                                    </p>
-                                </div>
-                                <Badge variant='secondary'>{order.status}</Badge>
+                {orders.map((order) => (
+                    <div key={order.id} className='rounded-md border p-3'>
+                        <div className='flex flex-wrap items-center justify-between gap-3'>
+                            <div>
+                                <p className='font-medium'>Order #{order.id}</p>
+                                <p className='text-sm text-muted-foreground'>
+                                    {order.currency} {order.total} - {new Date(order.created_at).toLocaleString()}
+                                </p>
                             </div>
-                            <div className='mt-3'>
-                                <Button size='sm' variant='outline' onClick={() => setSelectedOrderId(order.id)}>
-                                    Details
-                                </Button>
-                            </div>
+                            <Badge variant='secondary'>{order.status}</Badge>
                         </div>
-                    )
-                })}
+                        <div className='mt-3'>
+                            <Button size='sm' variant='outline' onClick={() => setSelectedOrderId(order.id)}>
+                                Details
+                            </Button>
+                        </div>
+                    </div>
+                ))}
                 {orders.length === 0 ? <p className='text-sm text-muted-foreground'>No orders yet.</p> : null}
             </CardContent>
 
-            <Dialog open={Boolean(selectedOrder)} onOpenChange={(open) => {
-                if (!open) {
-                    setSelectedOrderId(null)
-                }
-            }}>
+            <Dialog
+                open={Boolean(selectedOrder)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setSelectedOrderId(null)
+                    }
+                }}
+            >
                 <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
                     {selectedOrder ? (
                         <>

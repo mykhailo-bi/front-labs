@@ -126,32 +126,30 @@ export function OrdersPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {visibleOrders.map((order) => {
-                            return (
-                                <TableRow key={order.id}>
-                                    <TableCell>{order.id}</TableCell>
-                                    <TableCell>{order.user_id}</TableCell>
-                                    <TableCell>
-                                        <Badge variant='secondary'>{order.status}</Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        {order.currency} {order.total}
-                                    </TableCell>
-                                    <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                                    <TableCell className='text-right'>
-                                        <div className='flex justify-end gap-2'>
-                                            <Button
-                                                size='sm'
-                                                variant='outline'
-                                                onClick={() => setSelectedOrderId(order.id)}
-                                            >
-                                                Manage
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )
-                        })}
+                        {visibleOrders.map((order) => (
+                            <TableRow key={order.id}>
+                                <TableCell>{order.id}</TableCell>
+                                <TableCell>{order.user_id}</TableCell>
+                                <TableCell>
+                                    <Badge variant='secondary'>{order.status}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                    {order.currency} {order.total}
+                                </TableCell>
+                                <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                                <TableCell className='text-right'>
+                                    <div className='flex justify-end gap-2'>
+                                        <Button
+                                            size='sm'
+                                            variant='outline'
+                                            onClick={() => setSelectedOrderId(order.id)}
+                                        >
+                                            Manage
+                                        </Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
                     </TableBody>
                 </Table>
                 <Pager
@@ -164,11 +162,14 @@ export function OrdersPage() {
                 />
                 {isLoading ? <p className='text-sm text-muted-foreground'>Loading orders...</p> : null}
 
-                <Dialog open={Boolean(selectedOrder)} onOpenChange={(open) => {
-                    if (!open) {
-                        setSelectedOrderId(null)
-                    }
-                }}>
+                <Dialog
+                    open={Boolean(selectedOrder)}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setSelectedOrderId(null)
+                        }
+                    }}
+                >
                     <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-3xl'>
                         {selectedOrder ? (
                             <>
