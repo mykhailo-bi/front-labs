@@ -1115,7 +1115,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 @extend_schema_view(
     list=extend_schema(tags=["images"], summary="List images (admin)"),
-    retrieve=extend_schema(tags=["images"], summary="Get image (admin)"),
+    retrieve=extend_schema(tags=["images"], summary="Get image"),
     create=extend_schema(tags=["images"], summary="Create image (admin)"),
     update=extend_schema(tags=["images"], summary="Update image (admin)"),
     partial_update=extend_schema(tags=["images"], summary="Partially update image (admin)"),
@@ -1125,6 +1125,11 @@ class ImageViewSet(viewsets.ModelViewSet):
     queryset = models.Image.objects.all()
     serializer_class = ImageSerializer
     permission_classes = [IsAdmin]
+
+    def get_permissions(self):
+        if self.action == "retrieve":
+            return []
+        return [permission() for permission in self.permission_classes]
 
     def _storage_name_from_url(self, image_url: str) -> str | None:
         media_url = str(getattr(settings, "MEDIA_URL", "/media/") or "/media/")

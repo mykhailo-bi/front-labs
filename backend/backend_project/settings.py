@@ -151,12 +151,12 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": os.getenv("API_THROTTLE_ANON", "60/min"),
-        "user": os.getenv("API_THROTTLE_USER", "600/min"),
+        "anon": os.getenv("API_THROTTLE_ANON", "120/min"),
+        "user": os.getenv("API_THROTTLE_USER", "10000/min"),
         # Dedicated scope for password reset endpoints to mitigate abuse.
-        "password_reset": os.getenv("API_THROTTLE_PASSWORD_RESET", "10/hour"),
+        "password_reset": os.getenv("API_THROTTLE_PASSWORD_RESET", "20/hour"),
         # Email verification throttling.
-        "email_verification": os.getenv("API_THROTTLE_EMAIL_VERIFICATION", "10/hour"),
+        "email_verification": os.getenv("API_THROTTLE_EMAIL_VERIFICATION", "20/hour"),
     },
     # Avoid importing/using Django's auth AnonymousUser.
     "UNAUTHENTICATED_USER": None,
